@@ -1,0 +1,320 @@
+{
+  "info": {
+    "_postman_id": "c1f7b022-83b6-4b89-a29d-whatsapp-gateway",
+    "name": "WhatsApp REST API Gateway",
+    "description": "Production Postman Collection for the WhatsApp REST API Gateway. Includes all endpoints for sending messages, bulk messaging, OTP verification, QR & phone number pairing, and container health monitoring.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:7860",
+      "type": "string",
+      "description": "Base URL of the deployed gateway (e.g. http://localhost:7860 or https://your-space.hf.space)"
+    },
+    {
+      "key": "apiKey",
+      "value": "",
+      "type": "string",
+      "description": "Optional API Key for x-api-key authentication if GATEWAY_API_KEY is configured"
+    },
+    {
+      "key": "recipientNumber",
+      "value": "201012345678",
+      "type": "string",
+      "description": "Test recipient phone number with country code (digits only)"
+    }
+  ],
+  "item": [
+    {
+      "name": "Messages",
+      "description": "Endpoints to dispatch single and bulk WhatsApp text messages to any international number.",
+      "item": [
+        {
+          "name": "Send Single Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text",
+                "description": "API key configured in GATEWAY_API_KEY (optional in open mode)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"number\": \"{{recipientNumber}}\",\n  \"message\": \"Hello from WhatsApp REST Gateway! 🚀\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/send",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "messages", "send"]
+            },
+            "description": "Sends a single WhatsApp text message to the specified recipient phone number."
+          },
+          "response": []
+        },
+        {
+          "name": "Send Single Message (Convenience Alias)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"number\": \"{{recipientNumber}}\",\n  \"message\": \"Hello via convenience alias endpoint!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/send-message",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "send-message"]
+            },
+            "description": "Top-level direct alias endpoint for sending messages."
+          },
+          "response": []
+        },
+        {
+          "name": "Send Bulk Messages",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numbers\": [\n    \"{{recipientNumber}}\",\n    \"15551234567\"\n  ],\n  \"message\": \"System update: Scheduled maintenance tonight at 10 PM UTC.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/send-bulk",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "messages", "send-bulk"]
+            },
+            "description": "Dispatches a message sequentially to an array of recipients with spam-prevention delays."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "OTP Verification",
+      "description": "Cryptographically secure one-time password generation and verification flows with expiration TTL.",
+      "item": [
+        {
+          "name": "Request / Send OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"number\": \"{{recipientNumber}}\",\n  \"appName\": \"My SaaS Platform\",\n  \"length\": 6,\n  \"expiresInMinutes\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/otp/send",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "otp", "send"]
+            },
+            "description": "Generates a 6-digit numeric OTP, saves it in memory with 5-min TTL, and sends it to the recipient's WhatsApp."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"number\": \"{{recipientNumber}}\",\n  \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/otp/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "otp", "verify"]
+            },
+            "description": "Verifies user-submitted 6-digit OTP. Returns 200 VERIFIED or 400 with attempts left."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "WhatsApp Instance & Device Linking",
+      "description": "Manage the WhatsApp connection state, QR codes, phone number pairing codes, and session logout.",
+      "item": [
+        {
+          "name": "Get Connection Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/instance/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "instance", "status"]
+            },
+            "description": "Returns current connection state: 'open' (connected), 'connecting', or 'disconnected'."
+          },
+          "response": []
+        },
+        {
+          "name": "Get QR Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/instance/qr",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "instance", "qr"]
+            },
+            "description": "Fetches current QR code as base64 Data URL and raw code for camera scanning."
+          },
+          "response": []
+        },
+        {
+          "name": "Request 8-Digit Pairing Code (Phone Number Link)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"number\": \"{{recipientNumber}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/instance/pairing-code",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "instance", "pairing-code"]
+            },
+            "description": "Requests an 8-character pairing code (e.g. WXYZ-1234) to link phone directly without using a camera."
+          },
+          "response": []
+        },
+        {
+          "name": "Trigger Reconnect",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/instance/connect",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "instance", "connect"]
+            },
+            "description": "Forces instance to connect or generate a fresh QR code."
+          },
+          "response": []
+        },
+        {
+          "name": "Restart Instance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/instance/restart",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "instance", "restart"]
+            },
+            "description": "Restarts the internal WhatsApp socket connection."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout / Unlink Device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/instance/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "instance", "logout"]
+            },
+            "description": "Unlinks current WhatsApp account, deletes session files, and prepares for a new device connection."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "System & Health",
+      "description": "Container liveness checks and system information.",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Liveness check returning service status, uptime, WhatsApp connection state, and engine mode."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

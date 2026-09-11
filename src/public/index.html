@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp REST API Gateway</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="brand">
+        <div class="brand-icon">💬</div>
+        <div class="brand-title">
+          <h1>WhatsApp REST Gateway</h1>
+          <p>Universal Messaging & OTP Microservice for All Your Projects</p>
+        </div>
+      </div>
+      <div class="status-wrapper">
+        <div id="status-badge" class="badge badge-checking">
+          <div class="pulse-dot"></div>
+          <span id="badge-text">Connecting to WhatsApp...</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Top Info Bar -->
+    <div style="background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 14px 18px; margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between;">
+      <div style="font-size: 13px; color: #9ca3af;">
+        🔑 <b>Security:</b> Protect requests with <code style="color: #38bdf8;">x-api-key</code> or <code style="color: #38bdf8;">Authorization: Bearer</code>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <label for="api-key-input" style="font-size: 12px; margin: 0; color: #9ca3af;">Client API Key:</label>
+        <input type="password" id="api-key-input" placeholder="Optional if open mode" style="width: 220px; padding: 6px 10px; font-size: 12px;">
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid">
+      <!-- CARD 1: INSTANCE STATUS, QR CODE & PAIRING CODE -->
+      <div class="card">
+        <div class="card-title">
+          <span>📲</span> WhatsApp Connection
+        </div>
+        <div class="card-desc">Link your WhatsApp account via QR code or phone number pairing code.</div>
+
+        <!-- Disconnected view with options -->
+        <div id="qr-section" style="display: none;">
+          <!-- Pairing Mode Tabs -->
+          <div class="tabs" style="margin-bottom: 14px;">
+            <button class="tab-btn active" id="btn-tab-qr" onclick="switchPairingTab('qr')">📷 Scan QR Code</button>
+            <button class="tab-btn" id="btn-tab-code" onclick="switchPairingTab('code')">🔢 Link with Phone Number</button>
+          </div>
+
+          <!-- SUBTAB 1: QR CODE -->
+          <div id="subtab-qr" style="text-align: center;">
+            <ol class="steps">
+              <li>Open <b>WhatsApp</b> on your phone</li>
+              <li>Tap <b>Settings</b> &rarr; <b>Linked Devices</b> &rarr; <b>Link a Device</b></li>
+              <li>Point your camera at this QR code:</li>
+            </ol>
+            <div class="qr-box" style="min-height: 230px; display: flex; align-items: center; justify-content: center;">
+              <img id="qr-image" src="" alt="WhatsApp QR Code" style="display: none;">
+              <span id="qr-loading-text" style="color: #0f172a; font-weight: 600; font-size: 13px;">Generating QR code...</span>
+            </div>
+            <div style="margin-top: 10px; display: flex; justify-content: center; gap: 10px;">
+              <button class="btn btn-secondary btn-sm" onclick="loadQrCode(true)">🔄 Refresh QR</button>
+            </div>
+          </div>
+
+          <!-- SUBTAB 2: PAIRING CODE (PHONE NUMBER) -->
+          <div id="subtab-code" style="display: none;">
+            <p style="font-size: 13px; color: #94a3b8; margin-bottom: 14px;">
+              Cannot scan the QR code? Enter your phone number to receive an 8-character pairing code:
+            </p>
+            <div class="form-group">
+              <label for="pair-phone">Your WhatsApp Phone Number (with Country Code)</label>
+              <input type="tel" id="pair-phone" placeholder="e.g. 201012345678 or 15551234567">
+            </div>
+            <button id="btn-get-pairing-code" class="btn" style="width: 100%; margin-bottom: 14px;" onclick="handleRequestPairingCode()">
+              Generate Pairing Code
+            </button>
+            <div id="pairing-code-display" style="display: none; background: #0f172a; border: 1.5px solid #22c55e; border-radius: 12px; padding: 16px; text-align: center;">
+              <div style="font-size: 12px; color: #94a3b8; margin-bottom: 6px;">Your 8-character Pairing Code:</div>
+              <div id="pairing-code-text" style="font-size: 28px; font-weight: 800; letter-spacing: 4px; color: #4ade80; margin-bottom: 10px;"></div>
+              <ol class="steps" style="margin-bottom: 0;">
+                <li>Open <b>WhatsApp</b> on phone</li>
+                <li>Tap <b>Settings</b> &rarr; <b>Linked Devices</b> &rarr; <b>Link a Device</b></li>
+                <li>Tap <b>"Link with phone number instead"</b> at bottom</li>
+                <li>Type this 8-digit code!</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <!-- Connected view -->
+        <div id="connected-section" style="display: none; text-align: center; padding: 24px 0;">
+          <div style="font-size: 54px; margin-bottom: 12px;">✅</div>
+          <h2 style="font-size: 18px; color: #4ade80; margin-bottom: 8px;">Device Linked & Active</h2>
+          <p id="connected-user-text" style="font-size: 13px; color: #94a3b8; max-width: 320px; margin: 0 auto 20px;">
+            Your WhatsApp instance is active and connected. All API requests will be dispatched immediately.
+          </p>
+          <div style="display: flex; gap: 10px; justify-content: center;">
+            <button class="btn btn-secondary btn-sm" onclick="checkStatus()">Refresh Status</button>
+            <button class="btn btn-secondary btn-sm" style="background: #451a1a; color: #f87171;" onclick="handleLogout()">Unlink / Logout</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 2: SEND MESSAGE TESTER (PRIMARY USER REQUIREMENT) -->
+      <div class="card">
+        <div class="card-title">
+          <span>✉️</span> Dispatch Message
+        </div>
+        <div class="card-desc">POST /api/messages/send — Direct WhatsApp text message sender.</div>
+
+        <div class="form-group">
+          <label for="msg-phone">Recipient Phone Number (with Country Code)</label>
+          <input type="tel" id="msg-phone" placeholder="e.g. 201012345678 or 15551234567">
+        </div>
+
+        <div class="form-group">
+          <label for="msg-text">Message Content</label>
+          <textarea id="msg-text" placeholder="Type the WhatsApp message you want to send..."></textarea>
+        </div>
+
+        <button id="btn-send-msg" class="btn" style="width: 100%;">
+          Send WhatsApp Message
+        </button>
+
+        <pre id="msg-response" class="code-box"></pre>
+      </div>
+
+      <!-- CARD 3: OTP VERIFICATION -->
+      <div class="card">
+        <div class="card-title">
+          <span>🔐</span> OTP Verification Flow
+        </div>
+        <div class="card-desc">POST /api/otp/send & POST /api/otp/verify — Secure 6-digit one-time passcodes.</div>
+
+        <div class="form-group">
+          <label for="otp-phone">Recipient Phone Number</label>
+          <input type="tel" id="otp-phone" placeholder="e.g. 201012345678">
+        </div>
+
+        <div class="form-group">
+          <label for="otp-app-name">Application Name</label>
+          <input type="text" id="otp-app-name" value="My Project" placeholder="e.g. E-Commerce Store">
+        </div>
+
+        <button id="btn-request-otp" class="btn" style="width: 100%; margin-bottom: 16px;">
+          Send Verification Code
+        </button>
+
+        <!-- OTP Enter digits (hidden until sent) -->
+        <div id="otp-inputs-container" style="display: none; text-align: center; margin-top: 12px; border-top: 1px solid #27354f; padding-top: 16px;">
+          <label style="margin-bottom: 12px;">Enter 6-digit Code from WhatsApp:</label>
+          <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 16px;">
+            <input type="text" maxlength="1" class="otp-digit" style="width: 44px; height: 50px; text-align: center; font-size: 20px; font-weight: 700;">
+            <input type="text" maxlength="1" class="otp-digit" style="width: 44px; height: 50px; text-align: center; font-size: 20px; font-weight: 700;">
+            <input type="text" maxlength="1" class="otp-digit" style="width: 44px; height: 50px; text-align: center; font-size: 20px; font-weight: 700;">
+            <input type="text" maxlength="1" class="otp-digit" style="width: 44px; height: 50px; text-align: center; font-size: 20px; font-weight: 700;">
+            <input type="text" maxlength="1" class="otp-digit" style="width: 44px; height: 50px; text-align: center; font-size: 20px; font-weight: 700;">
+            <input type="text" maxlength="1" class="otp-digit" style="width: 44px; height: 50px; text-align: center; font-size: 20px; font-weight: 700;">
+          </div>
+          <button id="btn-verify-otp" class="btn btn-secondary" style="width: 100%;">
+            Verify Code
+          </button>
+        </div>
+
+        <pre id="otp-response" class="code-box"></pre>
+      </div>
+
+      <!-- CARD 4: API DOCUMENTATION & INTEGRATION SNIPPETS -->
+      <div class="card">
+        <div class="card-title">
+          <span>⚡</span> Integration Snippets
+        </div>
+        <div class="card-desc">Call this service from any project (Python, Node, cURL, etc.)</div>
+
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="tab-curl">cURL</button>
+          <button class="tab-btn" data-tab="tab-python">Python</button>
+          <button class="tab-btn" data-tab="tab-js">Node.js</button>
+        </div>
+
+        <div id="tab-curl" class="tab-content active code-wrapper">
+          <button class="copy-btn" onclick="copyToClipboard('snippet-curl', this)">Copy</button>
+          <pre id="snippet-curl" class="code-box" style="display: block; max-height: 230px;"></pre>
+        </div>
+
+        <div id="tab-python" class="tab-content code-wrapper">
+          <button class="copy-btn" onclick="copyToClipboard('snippet-python', this)">Copy</button>
+          <pre id="snippet-python" class="code-box" style="display: block; max-height: 230px;"></pre>
+        </div>
+
+        <div id="tab-js" class="tab-content code-wrapper">
+          <button class="copy-btn" onclick="copyToClipboard('snippet-js', this)">Copy</button>
+          <pre id="snippet-js" class="code-box" style="display: block; max-height: 230px;"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

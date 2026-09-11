@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: whatsapp-gateway
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GATEWAY_API_KEY
+        generateValue: true
