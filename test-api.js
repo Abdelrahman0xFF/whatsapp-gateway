@@ -37,6 +37,11 @@ async function runTests() {
     const webHtml = await webRes.text();
     assert(webRes.status === 200 && webHtml.includes('WhatsApp REST Gateway'), 'GET / serves Web Dashboard HTML');
 
+    // 2b. Favicon static assets serve
+    const favSvgRes = await fetch(`${baseUrl}/favicon.svg`);
+    const favIcoRes = await fetch(`${baseUrl}/favicon.ico`);
+    assert(favSvgRes.status === 200 && favIcoRes.status === 200, 'GET /favicon.svg and /favicon.ico return 200 OK');
+
     // 3. Token Generation & Management
     const genTokenRes = await fetch(`${baseUrl}/api/tokens/generate`, {
       method: 'POST',
