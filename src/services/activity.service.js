@@ -66,9 +66,49 @@ class ActivityService {
     return entry;
   }
 
-  getActivities(limit = 50) {
-    const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 100);
-    return this.activities.slice(0, parsedLimit);
+  getActivities({ page = 1, limit = 10, type, status, search } = {}) {
+    let filtered = [...this.activities];
+
+    if (type && type !== 'ALL') {
+      const targetType = type.toUpperCase();
+      filtered = filtered.filter(a => (a.type || '').toUpperCase() === targetType);
+    }
+
+    if (status && status !== 'ALL') {
+      const targetStatus = status.toUpperCase();
+      filtered = filtered.filter(a => (a.status || '').toUpperCase() === targetStatus);
+    }
+
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      filtered = filtered.filter(a =>
+        (a.recipient && String(a.recipient).toLowerCase().includes(q)) ||
+        (a.preview && String(a.preview).toLowerCase().includes(q)) ||
+        (a.error && String(a.error).toLowerCase().includes(q)) ||
+        (a.messageId && String(a.messageId).toLowerCase().includes(q)) ||
+        (a.type && String(a.type).toLowerCase().includes(q))
+      );
+    }
+
+    const total = filtered.length;
+    const parsedPage = Math.max(parseInt(page, 10) || 1, 1);
+    const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 100);
+    const totalPages = Math.max(Math.ceil(total / parsedLimit), 1);
+    const validPage = Math.min(parsedPage, totalPages);
+    const startIndex = (validPage - 1) * parsedLimit;
+    const paginated = filtered.slice(startIndex, startIndex + parsedLimit);
+
+    return {
+      activities: paginated,
+      pagination: {
+        page: validPage,
+        limit: parsedLimit,
+        total,
+        totalPages,
+        hasNext: validPage < totalPages,
+        hasPrev: validPage > 1
+      }
+    };
   }
 
   getStats() {
@@ -81,6 +121,16 @@ class ActivityService {
       failed,
       successRate: total > 0 ? `${Math.round((sent / total) * 100)}%` : '100%'
     };
+  }
+
+  deleteActivity(id) {
+    const initialLen = this.activities.length;
+    this.activities = this.activities.filter(a => a.id !== id);
+    if (this.activities.length !== initialLen) {
+      this._debouncedSave();
+      return true;
+    }
+    return false;
   }
 
   clear() {

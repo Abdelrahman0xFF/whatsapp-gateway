@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <!-- Toast Notification Container -->
@@ -25,7 +25,7 @@
         </div>
         <div class="brand-meta">
           <div class="brand-name">
-            <span class="product-title">WhatsApp REST Gateway</span>
+            <h1 class="product-title">WhatsApp REST Gateway</h1>
             <span class="version-tag">v2.0 Production</span>
           </div>
           <p class="brand-tagline">Microservice & Developer Cockpit</p>
@@ -51,7 +51,14 @@
             <path d="M21 2l-2 2m-1-1l-3 3m1 1l-2 2-4-4 2-2 4 4zm-7 7l-5.5 5.5a2.121 2.121 0 0 1-3 0 2.121 2.121 0 0 1 0-3L10 8l4 4z"></path>
           </svg>
           <span>API Tokens</span>
-          <span id="header-token-count" class="badge-count">0</span>
+          <span id="header-token-count" class="badge-count tabular-num">0</span>
+        </button>
+        <button id="btn-scroll-activity" class="btn btn-header-action" type="button">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
+          <span>Live Feed</span>
+          <span id="header-activity-beacon" class="beacon-dot active"></span>
         </button>
       </div>
     </header>
@@ -66,14 +73,23 @@
           </svg>
         </div>
         <div>
-          <div class="auth-headline">Client Request Authentication</div>
+          <div class="auth-headline-row">
+            <span class="auth-headline">Client Request Authentication</span>
+            <span id="auth-mode-chip" class="auth-mode-chip auth-mode-open">Open Dev Mode</span>
+          </div>
           <div class="auth-subline">Protected by timing-safe SHA-256 validation via <code class="code-inline">x-api-key</code> or <code class="code-inline">Bearer &lt;token&gt;</code>.</div>
         </div>
       </div>
       <div class="auth-input-group">
         <label for="client-api-key" class="auth-label">Active Session Key</label>
         <div class="input-action-wrapper">
-          <input type="password" id="client-api-key" class="mono-input" placeholder="wa_live_... (or leave blank if dev open mode)" autocomplete="off">
+          <input type="password" id="client-api-key" class="mono-input" placeholder="wa_live_... (or blank for open mode)" autocomplete="off">
+          <button id="btn-clear-session-key" class="btn-input-icon" type="button" title="Clear key" style="display: none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
           <button id="btn-toggle-key-visibility" class="btn-input-icon" type="button" title="Toggle visibility">
             <svg id="eye-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -84,435 +100,563 @@
       </div>
     </section>
 
-    <!-- Primary Grid: Left Column (Connection & Tokens) / Right Column (Playground & Activity) -->
-    <main class="cockpit-grid">
-      <!-- LEFT WORKSPACE -->
-      <div class="grid-column">
-        <!-- CARD 1: WHATSAPP INSTANCE & PAIRING -->
-        <section class="cockpit-card" id="card-connection">
-          <div class="card-header">
-            <div class="card-title-group">
-              <div class="card-icon-frame" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-                  <line x1="12" y1="18" x2="12.01" y2="18"></line>
-                </svg>
-              </div>
-              <div>
-                <h2 class="card-heading">WhatsApp Device Link</h2>
-                <p class="card-subheading">Manage active WebSocket session and device authentication.</p>
-              </div>
-            </div>
-            <button id="btn-refresh-status" class="btn btn-ghost btn-sm" type="button" title="Refresh connection state">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="23 4 23 10 17 10"></polyline>
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-              </svg>
-              <span>Refresh</span>
-            </button>
-          </div>
-
-          <!-- CONNECTED STATE VIEW -->
-          <div id="view-connected" class="connection-view-state" style="display: none;">
-            <div class="connected-hero">
-              <div class="hero-check-ring" aria-hidden="true">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                </svg>
-              </div>
-              <h3 class="hero-status-title">WhatsApp Socket Connected</h3>
-              <p id="connected-phone-display" class="hero-status-desc">Active phone number connected to WhatsApp Web multi-device session.</p>
-            </div>
-
-            <div class="device-spec-table">
-              <div class="spec-row">
-                <span class="spec-label">Instance JID</span>
-                <span id="instance-jid-val" class="spec-value mono-val">—</span>
-              </div>
-              <div class="spec-row">
-                <span class="spec-label">Session Storage</span>
-                <span class="spec-value mono-val">./data/auth_info</span>
-              </div>
-              <div class="spec-row">
-                <span class="spec-label">Watchdog Guard</span>
-                <span class="spec-value badge-active">Active (60s check)</span>
-              </div>
-            </div>
-
-            <div class="card-footer-actions">
-              <button id="btn-logout-device" class="btn btn-danger btn-sm" type="button">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                  <polyline points="16 17 21 12 16 7"></polyline>
-                  <line x1="21" y1="12" x2="9" y2="12"></line>
-                </svg>
-                <span>Unlink / Disconnect</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- DISCONNECTED STATE VIEW WITH PAIRING MODES -->
-          <div id="view-disconnected" class="connection-view-state">
-            <div class="segmented-control" role="tablist" aria-label="WhatsApp pairing method">
-              <button id="tab-btn-qr" class="segment-btn active" role="tab" aria-selected="true" type="button">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="3" width="7" height="7"></rect>
-                  <rect x="14" y="3" width="7" height="7"></rect>
-                  <rect x="14" y="14" width="7" height="7"></rect>
-                  <rect x="3" y="14" width="7" height="7"></rect>
-                </svg>
-                <span>Scan QR Code</span>
-              </button>
-              <button id="tab-btn-phone" class="segment-btn" role="tab" aria-selected="false" type="button">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                </svg>
-                <span>Phone Pairing Code</span>
-              </button>
-            </div>
-
-            <!-- TAB 1: QR CODE -->
-            <div id="pane-qr" class="pairing-pane active">
-              <div class="pairing-instructions">
-                <ol class="ordered-steps">
-                  <li>Open <strong>WhatsApp</strong> on your phone.</li>
-                  <li>Tap <strong>Settings</strong> &rarr; <strong>Linked Devices</strong> &rarr; <strong>Link a Device</strong>.</li>
-                  <li>Point your phone camera at the QR code below:</li>
-                </ol>
-              </div>
-
-              <div class="qr-canvas-wrapper">
-                <div class="qr-frame">
-                  <img id="qr-display-image" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'/%3E" alt="WhatsApp Pairing QR Code" style="display: none;">
-                  <div id="qr-skeleton" class="qr-skeleton-state">
-                    <div class="spinner-beacon"></div>
-                    <span id="qr-status-msg">Generating WhatsApp QR code...</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="qr-controls">
-                <button id="btn-force-qr" class="btn btn-secondary btn-sm" type="button">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="1 4 1 10 7 10"></polyline>
-                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+    <!-- Main Cockpit Layout: Upper Operational Deck (2 Columns) & Lower Observability Deck (Full Width) -->
+    <main class="cockpit-layout">
+      <!-- UPPER OPERATIONAL DECK -->
+      <div class="cockpit-top-grid">
+        <!-- LEFT COLUMN: INSTANCE CONNECTION & TOKEN GOVERNANCE -->
+        <div class="grid-column">
+          <!-- CARD 1: WHATSAPP INSTANCE & PAIRING -->
+          <section class="cockpit-card" id="card-connection">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-icon-frame" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                    <line x1="12" y1="18" x2="12.01" y2="18"></line>
                   </svg>
-                  <span>Request Fresh QR</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- TAB 2: PHONE NUMBER PAIRING CODE -->
-            <div id="pane-phone" class="pairing-pane" style="display: none;">
-              <div class="pairing-instructions">
-                <p class="guide-text">Link without camera scan. Enter your phone number with country code to generate an 8-digit WhatsApp pairing passcode.</p>
-              </div>
-
-              <div class="form-field">
-                <label for="input-pairing-phone" class="field-label">WhatsApp Phone Number</label>
-                <div class="input-with-hint">
-                  <input type="tel" id="input-pairing-phone" class="text-input" placeholder="e.g. 201012345678 or 15551234567">
-                  <span class="field-hint">Country code + number (digits only, no spaces or plus signs).</span>
+                </div>
+                <div>
+                  <h2 class="card-heading">WhatsApp Device Link</h2>
+                  <p class="card-subheading">Manage active WebSocket session and device authentication.</p>
                 </div>
               </div>
-
-              <button id="btn-request-pairing-code" class="btn btn-primary btn-block" type="button">
-                <span>Generate 8-Digit Code</span>
-              </button>
-
-              <div id="pairing-code-result" class="pairing-code-banner" style="display: none;">
-                <span class="banner-sublabel">Your WhatsApp 8-Character Pairing Code</span>
-                <div class="code-copy-row">
-                  <span id="display-pairing-code" class="huge-code-text">----</span>
-                  <button id="btn-copy-pairing-code" class="btn btn-ghost btn-sm" type="button" title="Copy pairing code">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    </svg>
-                    <span>Copy</span>
-                  </button>
-                </div>
-                <div class="pairing-steps-alert">
-                  <span class="alert-title">How to enter on your phone:</span>
-                  <p>In WhatsApp &rarr; <strong>Linked Devices</strong> &rarr; <strong>Link a Device</strong> &rarr; tap <strong>"Link with phone number instead"</strong> at bottom and type this code.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- CARD 2: API TOKEN STUDIO -->
-        <section class="cockpit-card" id="card-tokens">
-          <div class="card-header">
-            <div class="card-title-group">
-              <div class="card-icon-frame" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 2l-2 2m-1-1l-3 3m1 1l-2 2-4-4 2-2 4 4zm-7 7l-5.5 5.5a2.121 2.121 0 0 1-3 0 2.121 2.121 0 0 1 0-3L10 8l4 4z"></path>
-                </svg>
-              </div>
-              <div>
-                <h2 class="card-heading">API Tokens & Key Governance</h2>
-                <p class="card-subheading">Generate and revoke cryptographically secure bearer keys.</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Quick Token Generator Form -->
-          <form id="form-create-token" class="token-create-strip" onsubmit="event.preventDefault(); handleGenerateToken();">
-            <input type="text" id="token-label-input" class="text-input" placeholder="Token name (e.g. CRM Service, Mobile Backend)" required>
-            <button id="btn-submit-create-token" class="btn btn-primary btn-sm" type="submit">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              <span>Generate Key</span>
-            </button>
-          </form>
-
-          <!-- Newly Created Token Modal/Notice -->
-          <div id="new-token-alert" class="new-token-callout" style="display: none;">
-            <div class="callout-header">
-              <span class="callout-badge">New API Key Created</span>
-              <span class="callout-warning">Copy now; secret is not shown again.</span>
-            </div>
-            <div class="token-display-box">
-              <code id="new-token-val" class="token-code-text">wa_live_...</code>
-              <div class="token-action-buttons">
-                <button id="btn-copy-new-token" class="btn btn-secondary btn-xs" type="button">Copy Key</button>
-                <button id="btn-use-new-token" class="btn btn-accent btn-xs" type="button">Use in Session</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Tokens List Table -->
-          <div class="table-container">
-            <table class="tokens-table" aria-label="List of active API tokens">
-              <thead>
-                <tr>
-                  <th scope="col">Name</th>
-                  <th scope="col">Masked Key</th>
-                  <th scope="col">Created</th>
-                  <th scope="col" class="text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody id="tokens-table-body">
-                <tr>
-                  <td colspan="4" class="table-empty-row">Loading active tokens...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
-
-      <!-- RIGHT WORKSPACE: TESTING STUDIO & ACTIVITY -->
-      <div class="grid-column">
-        <!-- CARD 3: INTERACTIVE API TESTING STUDIO -->
-        <section class="cockpit-card" id="card-playground">
-          <div class="card-header">
-            <div class="card-title-group">
-              <div class="card-icon-frame" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                </svg>
-              </div>
-              <div>
-                <h2 class="card-heading">API Testing Studio</h2>
-                <p class="card-subheading">Execute live requests and generate multi-language client snippets.</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Operational Subtabs: Text, Media, OTP -->
-          <div class="segmented-control" role="tablist" aria-label="API dispatch mode">
-            <button id="tab-mode-text" class="segment-btn active" role="tab" aria-selected="true" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-              </svg>
-              <span>Text Message</span>
-            </button>
-            <button id="tab-mode-media" class="segment-btn" role="tab" aria-selected="false" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                <polyline points="21 15 16 10 5 21"></polyline>
-              </svg>
-              <span>Media Attachment</span>
-            </button>
-            <button id="tab-mode-otp" class="segment-btn" role="tab" aria-selected="false" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-              </svg>
-              <span>OTP Flow</span>
-            </button>
-          </div>
-
-          <!-- FORM 1: SEND TEXT MESSAGE -->
-          <div id="pane-send-text" class="playground-pane active">
-            <div class="form-field">
-              <label for="text-msg-phone" class="field-label">Recipient Phone Number</label>
-              <input type="tel" id="text-msg-phone" class="text-input" placeholder="e.g. 201012345678 (country code + digits)">
-            </div>
-            <div class="form-field">
-              <label for="text-msg-body" class="field-label">Message Content</label>
-              <textarea id="text-msg-body" class="textarea-input" rows="3" placeholder="Type WhatsApp message here..."></textarea>
-            </div>
-            <button id="btn-submit-text" class="btn btn-primary btn-block" type="button">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13"></line>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-              </svg>
-              <span>Dispatch Text Message</span>
-            </button>
-          </div>
-
-          <!-- FORM 2: SEND MEDIA MESSAGE -->
-          <div id="pane-send-media" class="playground-pane" style="display: none;">
-            <div class="form-grid-2col">
-              <div class="form-field">
-                <label for="media-msg-phone" class="field-label">Recipient Phone Number</label>
-                <input type="tel" id="media-msg-phone" class="text-input" placeholder="e.g. 201012345678">
-              </div>
-              <div class="form-field">
-                <label for="media-msg-type" class="field-label">Attachment Type</label>
-                <select id="media-msg-type" class="select-input">
-                  <option value="image" selected>Image (JPEG, PNG, WebP)</option>
-                  <option value="document">Document / PDF</option>
-                  <option value="audio">Audio Voice Note</option>
-                  <option value="video">Video (MP4)</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-field">
-              <label for="media-msg-url" class="field-label">Media File URL</label>
-              <input type="url" id="media-msg-url" class="text-input mono-input" placeholder="https://example.com/invoice.pdf or image URL">
-            </div>
-            <div class="form-field" id="field-media-caption">
-              <label for="media-msg-caption" class="field-label">Caption or Document Name</label>
-              <input type="text" id="media-msg-caption" class="text-input" placeholder="e.g. Your monthly invoice or photo caption">
-            </div>
-            <button id="btn-submit-media" class="btn btn-primary btn-block" type="button">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-              </svg>
-              <span>Dispatch Media Attachment</span>
-            </button>
-          </div>
-
-          <!-- FORM 3: OTP VERIFICATION FLOW -->
-          <div id="pane-send-otp" class="playground-pane" style="display: none;">
-            <div class="form-grid-2col">
-              <div class="form-field">
-                <label for="otp-recipient-phone" class="field-label">Recipient Phone Number</label>
-                <input type="tel" id="otp-recipient-phone" class="text-input" placeholder="e.g. 201012345678">
-              </div>
-              <div class="form-field">
-                <label for="otp-app-title" class="field-label">Application Name</label>
-                <input type="text" id="otp-app-title" class="text-input" value="My Project" placeholder="e.g. SaaS Portal">
-              </div>
-            </div>
-            <button id="btn-submit-otp" class="btn btn-primary btn-block" type="button">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-              </svg>
-              <span>Send One-Time Passcode</span>
-            </button>
-
-            <!-- OTP DIGITS ENTRY (REVEALED AFTER SEND) -->
-            <div id="otp-verify-stage" class="otp-verify-block" style="display: none;">
-              <span class="verify-instruction">Type the 6-digit passcode received on WhatsApp:</span>
-              <div class="otp-pin-grid">
-                <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code">
-                <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]*">
-                <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]*">
-                <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]*">
-                <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]*">
-                <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]*">
-              </div>
-              <button id="btn-submit-verify-otp" class="btn btn-accent btn-block" type="button">
-                <span>Verify Passcode</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- RESPONSE INSPECTOR -->
-          <div class="inspector-section">
-            <div class="inspector-top-bar">
-              <span class="inspector-title">API Response Inspector</span>
-              <div class="inspector-meta-group">
-                <span id="response-status-badge" class="response-status-pill" style="display: none;">200 OK</span>
-                <span id="response-latency-badge" class="response-latency-pill tabular-num" style="display: none;">0ms</span>
-                <button id="btn-copy-response" class="btn btn-ghost btn-xs" type="button">Copy JSON</button>
-              </div>
-            </div>
-            <pre id="response-output-box" class="code-terminal" tabindex="0">Waiting for API dispatch...</pre>
-          </div>
-
-          <!-- LIVE MULTI-LANGUAGE CODE SNIPPETS -->
-          <div class="snippets-section">
-            <div class="snippets-header">
-              <span class="snippets-title">Client Integration Snippets</span>
-              <div class="snippet-lang-tabs" role="tablist">
-                <button class="lang-tab active" data-lang="curl" type="button">cURL</button>
-                <button class="lang-tab" data-lang="python" type="button">Python</button>
-                <button class="lang-tab" data-lang="nodejs" type="button">Node.js</button>
-                <button class="lang-tab" data-lang="go" type="button">Go</button>
-              </div>
-              <button id="btn-copy-snippet" class="btn btn-ghost btn-xs" type="button">Copy Code</button>
-            </div>
-            <pre id="code-snippet-box" class="code-terminal" tabindex="0"></pre>
-          </div>
-        </section>
-
-        <!-- CARD 4: LIVE DISPATCH ACTIVITY & AUDIT FEED -->
-        <section class="cockpit-card" id="card-activity">
-          <div class="card-header">
-            <div class="card-title-group">
-              <div class="card-icon-frame" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-                </svg>
-              </div>
-              <div>
-                <h2 class="card-heading">Live Dispatch & Audit Feed</h2>
-                <p class="card-subheading">Real-time trace of recent dispatches, delivery receipts, and verification results.</p>
-              </div>
-            </div>
-            <div class="card-action-group">
-              <button id="btn-refresh-activity" class="btn btn-ghost btn-sm" type="button">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <button id="btn-refresh-status" class="btn btn-ghost btn-sm" type="button" title="Refresh connection state">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="23 4 23 10 17 10"></polyline>
                   <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                 </svg>
                 <span>Refresh</span>
               </button>
-              <button id="btn-clear-activity" class="btn btn-ghost btn-sm btn-ghost-danger" type="button">Clear</button>
+            </div>
+
+            <!-- CONNECTED STATE VIEW -->
+            <div id="view-connected" class="connection-view-state" style="display: none;">
+              <div class="connected-hero">
+                <div class="hero-check-ring" aria-hidden="true">
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                </div>
+                <h3 class="hero-status-title">WhatsApp Socket Connected</h3>
+                <p id="connected-phone-display" class="hero-status-desc">Active phone number connected to WhatsApp Web multi-device session.</p>
+              </div>
+
+              <div class="device-spec-table">
+                <div class="spec-row">
+                  <span class="spec-label">Instance JID</span>
+                  <span id="instance-jid-val" class="spec-value mono-val">—</span>
+                </div>
+                <div class="spec-row">
+                  <span class="spec-label">Session Storage</span>
+                  <span class="spec-value mono-val">./data/auth_info</span>
+                </div>
+                <div class="spec-row">
+                  <span class="spec-label">Watchdog Guard</span>
+                  <span class="spec-value badge-active">Active (60s check)</span>
+                </div>
+              </div>
+
+              <!-- Inline Confirmation Drawer for Unlink (No window.confirm) -->
+              <div id="unlink-confirm-drawer" class="inline-confirm-drawer" style="display: none;">
+                <div class="confirm-message-group">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                  </svg>
+                  <span>Unlink this device? WebSocket session will close immediately.</span>
+                </div>
+                <div class="confirm-btn-group">
+                  <button id="btn-cancel-unlink" class="btn btn-ghost btn-xs" type="button">Cancel</button>
+                  <button id="btn-confirm-unlink" class="btn btn-danger btn-xs" type="button">Confirm Unlink</button>
+                </div>
+              </div>
+
+              <div class="card-footer-actions">
+                <button id="btn-logout-device" class="btn btn-danger btn-sm" type="button">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                  </svg>
+                  <span>Unlink / Disconnect</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- DISCONNECTED STATE VIEW WITH PAIRING MODES -->
+            <div id="view-disconnected" class="connection-view-state">
+              <div class="segmented-control" role="tablist" aria-label="WhatsApp pairing method">
+                <button id="tab-btn-qr" class="segment-btn active" role="tab" aria-selected="true" type="button">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="14" width="7" height="7"></rect>
+                    <rect x="3" y="14" width="7" height="7"></rect>
+                  </svg>
+                  <span>Scan QR Code</span>
+                </button>
+                <button id="tab-btn-phone" class="segment-btn" role="tab" aria-selected="false" type="button">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                  </svg>
+                  <span>Phone Pairing Code</span>
+                </button>
+              </div>
+
+              <!-- TAB 1: QR CODE -->
+              <div id="pane-qr" class="pairing-pane active">
+                <div class="pairing-instructions">
+                  <ol class="ordered-steps">
+                    <li>Open <strong>WhatsApp</strong> on your phone.</li>
+                    <li>Tap <strong>Settings</strong> &rarr; <strong>Linked Devices</strong> &rarr; <strong>Link a Device</strong>.</li>
+                    <li>Point your phone camera at the QR code below:</li>
+                  </ol>
+                </div>
+
+                <div class="qr-canvas-wrapper">
+                  <div class="qr-frame">
+                    <img id="qr-display-image" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'/%3E" alt="WhatsApp Pairing QR Code" style="display: none;">
+                    <div id="qr-skeleton" class="qr-skeleton-state">
+                      <div class="spinner-beacon"></div>
+                      <span id="qr-status-msg">Generating WhatsApp QR code...</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="qr-controls">
+                  <button id="btn-force-qr" class="btn btn-secondary btn-sm" type="button">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="1 4 1 10 7 10"></polyline>
+                      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                    </svg>
+                    <span>Request Fresh QR</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- TAB 2: PHONE NUMBER PAIRING CODE -->
+              <div id="pane-phone" class="pairing-pane" style="display: none;">
+                <div class="pairing-instructions">
+                  <p class="guide-text">Link without camera scan. Enter your phone number with country code to generate an 8-digit WhatsApp pairing passcode.</p>
+                </div>
+
+                <div class="form-field">
+                  <label for="input-pairing-phone" class="field-label">WhatsApp Phone Number</label>
+                  <div class="input-with-hint">
+                    <input type="tel" id="input-pairing-phone" class="text-input" placeholder="e.g. 201012345678 or 15551234567">
+                    <span class="field-hint">Country code + number (digits only, no spaces or plus signs).</span>
+                  </div>
+                </div>
+
+                <button id="btn-request-pairing-code" class="btn btn-primary btn-block" type="button">
+                  <span>Generate 8-Digit Code</span>
+                </button>
+
+                <div id="pairing-code-result" class="pairing-code-banner" style="display: none;">
+                  <span class="banner-sublabel">Your WhatsApp 8-Character Pairing Code</span>
+                  <div class="code-copy-row">
+                    <span id="display-pairing-code" class="huge-code-text">----</span>
+                    <button id="btn-copy-pairing-code" class="btn btn-ghost btn-sm" type="button" title="Copy pairing code">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                      <span>Copy</span>
+                    </button>
+                  </div>
+                  <div class="pairing-steps-alert">
+                    <span class="alert-title">How to enter on your phone:</span>
+                    <p>In WhatsApp &rarr; <strong>Linked Devices</strong> &rarr; <strong>Link a Device</strong> &rarr; tap <strong>"Link with phone number instead"</strong> at bottom and type this code.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- CARD 2: API TOKEN STUDIO -->
+          <section class="cockpit-card" id="card-tokens">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-icon-frame" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 2l-2 2m-1-1l-3 3m1 1l-2 2-4-4 2-2 4 4zm-7 7l-5.5 5.5a2.121 2.121 0 0 1-3 0 2.121 2.121 0 0 1 0-3L10 8l4 4z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="card-heading">API Tokens & Governance</h2>
+                  <p class="card-subheading">Generate and revoke cryptographically secure bearer keys.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Token Generator Form -->
+            <form id="form-create-token" class="token-create-strip" onsubmit="event.preventDefault(); handleGenerateToken();">
+              <input type="text" id="token-label-input" class="text-input" placeholder="Token name (e.g. CRM Service, Mobile Backend)" required>
+              <button id="btn-submit-create-token" class="btn btn-primary btn-sm" type="submit">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>Generate Key</span>
+              </button>
+            </form>
+
+            <!-- Newly Created Token Modal/Notice -->
+            <div id="new-token-alert" class="new-token-callout" style="display: none;">
+              <div class="callout-header">
+                <span class="callout-badge">New API Key Created</span>
+                <span class="callout-warning">Copy now; secret is not shown again.</span>
+              </div>
+              <div class="token-display-box">
+                <code id="new-token-val" class="token-code-text">wa_live_...</code>
+                <div class="token-action-buttons">
+                  <button id="btn-copy-new-token" class="btn btn-secondary btn-xs" type="button">Copy Key</button>
+                  <button id="btn-use-new-token" class="btn btn-accent btn-xs" type="button">Use in Session</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tokens List Table -->
+            <div class="table-container tokens-table-wrap">
+              <table class="tokens-table" aria-label="List of active API tokens">
+                <thead>
+                  <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Masked Key</th>
+                    <th scope="col">Created</th>
+                    <th scope="col" class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="tokens-table-body">
+                  <tr>
+                    <td colspan="4" class="table-empty-row">Loading active tokens...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- RIGHT COLUMN: INTERACTIVE API TESTING STUDIO -->
+        <div class="grid-column">
+          <!-- CARD 3: INTERACTIVE API TESTING STUDIO -->
+          <section class="cockpit-card" id="card-playground">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-icon-frame" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="card-heading">API Testing Studio</h2>
+                  <p class="card-subheading">Execute live requests and generate multi-language client snippets.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Operational Subtabs: Text, Media, OTP -->
+            <div class="segmented-control" role="tablist" aria-label="API dispatch mode">
+              <button id="tab-mode-text" class="segment-btn active" role="tab" aria-selected="true" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <span>Text Message</span>
+              </button>
+              <button id="tab-mode-media" class="segment-btn" role="tab" aria-selected="false" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+                <span>Media Attachment</span>
+              </button>
+              <button id="tab-mode-otp" class="segment-btn" role="tab" aria-selected="false" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                <span>OTP Flow</span>
+              </button>
+            </div>
+
+            <!-- FORM 1: SEND TEXT MESSAGE -->
+            <div id="pane-send-text" class="playground-pane active">
+              <div class="form-field">
+                <label for="text-msg-phone" class="field-label">Recipient Phone Number</label>
+                <input type="tel" id="text-msg-phone" class="text-input" placeholder="e.g. 201012345678 (country code + digits)">
+              </div>
+              <div class="form-field">
+                <label for="text-msg-body" class="field-label">Message Content</label>
+                <textarea id="text-msg-body" class="textarea-input" rows="3" placeholder="Type WhatsApp message here..."></textarea>
+              </div>
+              <button id="btn-submit-text" class="btn btn-primary btn-block" type="button">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+                <span>Dispatch Text Message</span>
+              </button>
+            </div>
+
+            <!-- FORM 2: SEND MEDIA MESSAGE -->
+            <div id="pane-send-media" class="playground-pane" style="display: none;">
+              <div class="form-grid-2col">
+                <div class="form-field">
+                  <label for="media-msg-phone" class="field-label">Recipient Phone Number</label>
+                  <input type="tel" id="media-msg-phone" class="text-input" placeholder="e.g. 201012345678">
+                </div>
+                <div class="form-field">
+                  <label for="media-msg-type" class="field-label">Attachment Type</label>
+                  <select id="media-msg-type" class="select-input">
+                    <option value="image" selected>Image (JPEG, PNG, WebP)</option>
+                    <option value="document">Document / PDF</option>
+                    <option value="audio">Audio Voice Note</option>
+                    <option value="video">Video (MP4)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-field">
+                <label for="media-msg-url" class="field-label">Media File URL</label>
+                <input type="url" id="media-msg-url" class="text-input mono-input" placeholder="https://example.com/invoice.pdf or image URL">
+              </div>
+              <div class="form-field" id="field-media-caption">
+                <label for="media-msg-caption" class="field-label">Caption or Document Name</label>
+                <input type="text" id="media-msg-caption" class="text-input" placeholder="e.g. Your monthly invoice or photo caption">
+              </div>
+              <button id="btn-submit-media" class="btn btn-primary btn-block" type="button">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                </svg>
+                <span>Dispatch Media Attachment</span>
+              </button>
+            </div>
+
+            <!-- FORM 3: OTP VERIFICATION FLOW -->
+            <div id="pane-send-otp" class="playground-pane" style="display: none;">
+              <div class="form-grid-2col">
+                <div class="form-field">
+                  <label for="otp-recipient-phone" class="field-label">Recipient Phone Number</label>
+                  <input type="tel" id="otp-recipient-phone" class="text-input" placeholder="e.g. 201012345678">
+                </div>
+                <div class="form-field">
+                  <label for="otp-app-title" class="field-label">Application Name</label>
+                  <input type="text" id="otp-app-title" class="text-input" value="My Project" placeholder="e.g. SaaS Portal">
+                </div>
+              </div>
+              <button id="btn-submit-otp" class="btn btn-primary btn-block" type="button">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                <span>Send One-Time Passcode</span>
+              </button>
+
+              <!-- OTP DIGITS ENTRY (REVEALED AFTER SEND) -->
+              <div id="otp-verify-stage" class="otp-verify-block" style="display: none;">
+                <span class="verify-instruction">Type the 6-digit passcode received on WhatsApp:</span>
+                <div class="otp-pin-grid">
+                  <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" aria-label="OTP Digit 1">
+                  <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]*" aria-label="OTP Digit 2">
+                  <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]*" aria-label="OTP Digit 3">
+                  <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]*" aria-label="OTP Digit 4">
+                  <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]*" aria-label="OTP Digit 5">
+                  <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]*" aria-label="OTP Digit 6">
+                </div>
+                <button id="btn-submit-verify-otp" class="btn btn-accent btn-block" type="button">
+                  <span>Verify Passcode</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- UNIFIED CONSOLE PANEL: RESPONSE INSPECTOR & CLIENT SNIPPETS -->
+            <div class="console-section">
+              <div class="console-header">
+                <div class="console-tab-group" role="tablist">
+                  <button id="tab-console-response" class="console-tab-btn active" role="tab" aria-selected="true" type="button">
+                    <span>API Response</span>
+                    <span id="response-status-badge" class="response-status-pill" style="display: none;">200 OK</span>
+                    <span id="response-latency-badge" class="response-latency-pill tabular-num" style="display: none;">0ms</span>
+                  </button>
+                  <button id="tab-console-snippets" class="console-tab-btn" role="tab" aria-selected="false" type="button">
+                    <span>Integration Code</span>
+                  </button>
+                </div>
+                <div class="console-actions">
+                  <div id="snippet-lang-selector" class="snippet-lang-tabs" role="tablist" style="display: none;">
+                    <button class="lang-tab active" data-lang="curl" type="button">cURL</button>
+                    <button class="lang-tab" data-lang="python" type="button">Python</button>
+                    <button class="lang-tab" data-lang="nodejs" type="button">Node.js</button>
+                    <button class="lang-tab" data-lang="go" type="button">Go</button>
+                  </div>
+                  <button id="btn-copy-response" class="btn btn-ghost btn-xs" type="button" title="Copy response JSON">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    <span>Copy JSON</span>
+                  </button>
+                  <button id="btn-copy-snippet" class="btn btn-ghost btn-xs" type="button" title="Copy code snippet" style="display: none;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    <span>Copy Code</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- PANE 1: RESPONSE INSPECTOR -->
+              <div id="pane-console-response" class="console-pane active">
+                <pre id="response-output-box" class="code-terminal" tabindex="0">Waiting for API dispatch...</pre>
+              </div>
+
+              <!-- PANE 2: INTEGRATION SNIPPETS -->
+              <div id="pane-console-snippets" class="console-pane" style="display: none;">
+                <pre id="code-snippet-box" class="code-terminal" tabindex="0"></pre>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- LOWER OBSERVABILITY DECK: FULL-WIDTH LIVE DISPATCH & AUDIT FEED -->
+      <section class="cockpit-card card-full-width" id="card-activity">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon-frame" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+              </svg>
+            </div>
+            <div>
+              <div class="card-title-meta-row">
+                <h2 class="card-heading">Live Dispatch & Audit Feed</h2>
+                <span id="activity-stats-summary" class="stats-summary-pill tabular-num">0 total</span>
+              </div>
+              <p class="card-subheading">Real-time trace of recent WhatsApp dispatches, delivery receipts, and verification results.</p>
             </div>
           </div>
-
-          <div class="table-container">
-            <table class="activity-table" aria-label="Recent dispatch activities">
-              <thead>
-                <tr>
-                  <th scope="col">Time</th>
-                  <th scope="col">Type</th>
-                  <th scope="col">Recipient</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Summary</th>
-                </tr>
-              </thead>
-              <tbody id="activity-table-body">
-                <tr>
-                  <td colspan="5" class="table-empty-row">No dispatches recorded in this session.</td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="card-action-group">
+            <button id="activity-live-toggle" class="btn btn-ghost btn-sm btn-live-toggle active" type="button" title="Toggle automatic polling">
+              <span class="live-pulse-dot"></span>
+              <span id="live-toggle-label">Live Polling</span>
+            </button>
+            <button id="btn-refresh-activity" class="btn btn-ghost btn-sm" type="button" title="Refresh activity feed">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+              </svg>
+              <span>Refresh</span>
+            </button>
+            <button id="btn-clear-activity" class="btn btn-ghost btn-sm btn-ghost-danger" type="button">Clear Feed</button>
           </div>
-        </section>
-      </div>
+        </div>
+
+        <!-- Inline Confirmation Drawer for Clear All (No window.confirm) -->
+        <div id="clear-confirm-drawer" class="inline-confirm-drawer" style="display: none;">
+          <div class="confirm-message-group">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <span>Permanently clear all activity records from gateway audit storage?</span>
+          </div>
+          <div class="confirm-btn-group">
+            <button id="btn-cancel-clear-activity" class="btn btn-ghost btn-xs" type="button">Cancel</button>
+            <button id="btn-confirm-clear-activity" class="btn btn-danger btn-xs" type="button">Confirm Clear</button>
+          </div>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="activity-toolbar">
+          <div class="toolbar-search-box">
+            <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="activity-search-input" class="text-input toolbar-search-input" placeholder="Search by recipient, message text, error or ID...">
+            <button id="btn-clear-search" class="btn-clear-search" type="button" title="Clear search" style="display: none;">&times;</button>
+          </div>
+
+          <div class="toolbar-filters">
+            <div class="filter-group">
+              <label for="activity-type-filter" class="filter-label">Type:</label>
+              <select id="activity-type-filter" class="select-input select-filter">
+                <option value="ALL" selected>All Types</option>
+                <option value="TEXT">Text Message</option>
+                <option value="MEDIA">Media</option>
+                <option value="OTP_SEND">OTP Send</option>
+                <option value="OTP_VERIFY">OTP Verify</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="activity-status-filter" class="filter-label">Status:</label>
+              <select id="activity-status-filter" class="select-input select-filter">
+                <option value="ALL" selected>All Statuses</option>
+                <option value="SENT">Sent / Success</option>
+                <option value="VERIFIED">Verified</option>
+                <option value="FAILED">Failed</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="activity-page-size" class="filter-label">Show:</label>
+              <select id="activity-page-size" class="select-input select-filter">
+                <option value="10" selected>10 / page</option>
+                <option value="25">25 / page</option>
+                <option value="50">50 / page</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity Data Table -->
+        <div class="table-container activity-table-wrap">
+          <table class="activity-table" aria-label="Recent dispatch activities">
+            <thead>
+              <tr>
+                <th scope="col" style="width: 130px;">Time</th>
+                <th scope="col" style="width: 110px;">Type</th>
+                <th scope="col" style="width: 170px;">Recipient</th>
+                <th scope="col" style="width: 110px;">Status</th>
+                <th scope="col">Payload Summary / Error Trace</th>
+                <th scope="col" class="text-right" style="width: 80px;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="activity-table-body">
+              <tr>
+                <td colspan="6" class="table-empty-row">Loading gateway dispatches...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Activity Pagination Deck -->
+        <div class="activity-pagination-bar" id="activity-pagination-bar">
+          <div class="pagination-info">
+            <span id="activity-pagination-info" class="tabular-num">Showing 0 of 0 dispatches</span>
+          </div>
+          <div class="pagination-controls" id="activity-pagination-controls">
+            <button id="btn-first-page" class="btn btn-ghost btn-xs btn-pag-nav" type="button" title="First Page" disabled>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
+            </button>
+            <button id="btn-prev-page" class="btn btn-ghost btn-xs btn-pag-nav" type="button" title="Previous Page" disabled>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+              <span>Prev</span>
+            </button>
+            <div id="activity-page-numbers" class="pagination-numbers">
+              <button class="btn-page-number active" type="button">1</button>
+            </div>
+            <button id="btn-next-page" class="btn btn-ghost btn-xs btn-pag-nav" type="button" title="Next Page" disabled>
+              <span>Next</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+            <button id="btn-last-page" class="btn btn-ghost btn-xs btn-pag-nav" type="button" title="Last Page" disabled>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
+            </button>
+          </div>
+        </div>
+      </section>
     </main>
 
     <!-- Cockpit Footer -->

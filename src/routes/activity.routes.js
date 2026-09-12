@@ -11,4 +11,8 @@ router.delete('/clear', (req, res, next) => {
   activityController.clearActivities(req, res, next);
 });
 
+router.delete('/:id', (req, res, next) => {
+  activityController.deleteActivity(req, res, next);
+});
+
 export default router;

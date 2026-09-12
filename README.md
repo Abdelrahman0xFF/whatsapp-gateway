@@ -1,159 +1,176 @@
 # 💬 WhatsApp REST API Gateway
 
-A lightweight, standalone **Express.js REST API microservice** to send WhatsApp messages from any application (Python scripts, SaaS backends, mobile apps, webhooks).
+A lightweight, production-grade **Express.js REST API microservice and developer cockpit** to automate WhatsApp messaging from any application (Python backends, SaaS platforms, mobile applications, webhooks, or scripts).
 
-Runs inside **1 single Docker container** with **zero external databases** (no PostgreSQL, no Redis, no Docker Compose needed).
+Runs in a **single Docker container** with **zero external database dependencies** (no PostgreSQL, no Redis, no Docker Compose required).
 
 ---
 
-## ⚡ Quick Start (Local)
+## ⚡ Key Capabilities
+
+- **🚀 Single-Container Architecture**: Self-contained with local atomic JSON storage; deploys anywhere in minutes.
+- **🖥️ Developer Cockpit**: High-density developer dashboard featuring an upper operational deck, an integrated testing console with live response & code generator, and a dedicated full-width paginated audit feed.
+- **📱 Dual Pairing Modes**: Connect via high-contrast QR code scan or 8-digit phone pairing code (no camera scan required).
+- **🔑 Cryptographic Key Governance**: Generate and revoke `wa_live_...` tokens with timing-safe SHA-256 validation. Supports multiple project keys and open dev mode.
+- **💬 Rich Dispatch Suite**: Send plain text, bulk messages with anti-spam rate limiting, and rich media (images, PDFs, documents, voice notes, video) via URL or Base64.
+- **🔐 One-Time Password (OTP) Engine**: Built-in 6-digit OTP delivery and verification with automated expiration windows and anti-bombing cooldowns.
+- **📊 Real-Time Observability Deck**: Complete activity feed with server-side pagination, search filtering, type/status filters, and live auto-polling.
+- **🪝 Outbound Webhooks**: Deliver incoming messages and delivery receipts to external endpoints with HMAC-SHA256 signature verification.
+
+---
+
+## 🏁 Quick Start (Local)
+
+### 1. Install & Launch
 
 ```bash
-# 1. Install dependencies
+# Clone and install dependencies
+git clone https://github.com/Abdelrahman0xFF/whatsapp-gateway.git
+cd whatsapp-gateway
 npm install
 
-# 2. Start the server
+# Start the server (default port 7860)
 npm start
+
+# Or run with auto-reload in development
+npm run dev
 ```
 
+### 2. Connect Your WhatsApp
+
 1. Open **`http://localhost:7860`** in your browser.
-2. Link your WhatsApp:
-   - **Option A (QR Code)**: Scan the QR code with WhatsApp (**Settings** &rarr; **Linked Devices** &rarr; **Link a Device**).
-   - **Option B (Phone Number)**: Click *"Link with Phone Number"*, enter your number, and type the 8-digit pairing code into WhatsApp.
-3. Send your first message:
+2. Choose your pairing method:
+   - **QR Code**: Scan the QR code in WhatsApp (**Settings** &rarr; **Linked Devices** &rarr; **Link a Device**).
+   - **Phone Pairing Code**: Click _"Phone Pairing Code"_, input your phone number with country code, and type the 8-character passcode into WhatsApp.
+
+### 3. Dispatch Your First Message
+
 ```bash
 curl -X POST "http://localhost:7860/api/messages/send" \
   -H "Content-Type: application/json" \
-  -d '{"number": "201012345678", "message": "Hello from my API!"}'
+  -d '{"number": "201012345678", "message": "Hello from WhatsApp REST Gateway! 🚀"}'
 ```
 
 ---
 
+## 🖥️ Developer Cockpit Overview
+
+The gateway serves a built-in web cockpit at `http://localhost:7860/` organized into two functional tiers:
+
+### Upper Operational Deck (Two-Column Balanced Grid)
+
+- **WhatsApp Device Link**: Monitor real-time WebSocket connection state, instance JID, session storage, and watchdog health checks. Unlink devices using inline confirmation drawers (no browser modals).
+- **API Token Studio**: Generate cryptographically secure `wa_live_...` keys, view masked credentials, copy tokens in one click, and revoke tokens with per-row confirmation.
+- **Interactive Testing Studio**:
+  - Test Text, Media, and OTP dispatches interactively.
+  - **Unified Console Panel**: Toggle between **API Response** (displaying real-time HTTP status, round-trip latency in `ms`, and formatted JSON) and **Integration Code** (live snippets in cURL, Python, Node.js, and Go).
+
+### Lower Observability Deck (Dedicated Full-Width Feed)
+
+- **Live Dispatch & Audit Feed**:
+  - **Live Search**: Instant debounced searching by recipient number, preview text, error trace, or message ID.
+  - **Filter Controls**: Filter by Type (`TEXT`, `MEDIA`, `OTP_SEND`, `OTP_VERIFY`) and Status (`SENT`, `VERIFIED`, `FAILED`).
+  - **Pagination Engine**: Controls for page navigation (`First`, `Prev`, dynamic page numbers, `Next`, `Last`) and configurable page sizes (`10`, `25`, `50` per page).
+  - **Live Stream Toggle**: Pulsing live polling indicator with one-click pause and resume.
+  - **Record Deletion**: Delete individual audit entries or clear the entire feed using inline confirmations.
+
 ---
 
-## 🚀 Cloud Deployment
+## ☁️ Deployment Guides
 
-### Option A: Render.com (Recommended Free Cloud Hosting)
+### Option A: Render.com (1-Click Blueprint)
 
-The repository includes a `render.yaml` blueprint ready for 1-click deployment.
+The repository includes a [`render.yaml`](render.yaml) blueprint ready for 1-click deployment:
 
-1. Push this project to your GitHub repository.
-2. Sign up at [Render.com](https://render.com) (free).
-3. Click **New +** &rarr; **Web Service**.
-4. Connect your GitHub repository.
-5. Configure the service:
-   - **Runtime**: `Docker`
-   - **Instance Type**: `Free`
-   - **Health Check Path**: `/api/health`
-6. Under **Environment Variables**, add:
-   - `GATEWAY_API_KEY`: *(Your generated API key, e.g. `wa_...`)*
-7. Click **Create Web Service**.
-8. Once deployed, open your `https://<your-service>.onrender.com` dashboard and link your WhatsApp.
+1. Push your repository to GitHub.
+2. Go to [Render.com](https://render.com) and navigate to **Blueprints** &rarr; **New Blueprint Instance**.
+3. Connect your repository. Render will automatically detect `render.yaml` and configure the service as a Docker Web Service on the free tier.
+4. Open the deployed service URL (`https://<your-service>.onrender.com`), link your WhatsApp, and start sending messages.
 
-> [!IMPORTANT]
-> **Keep Free Tier Awake (24/7)**:
-> Render Free Web Services sleep after 15 minutes of inactivity. Set up a free monitor at [UptimeRobot](https://uptimerobot.com) or [cron-job.org](https://cron-job.org) to ping `GET https://<your-service>.onrender.com/api/health` every 10 minutes to keep your container awake 24/7.
+> [!TIP]
+> **Keep Free Tier Containers Awake (24/7)**:
+> Render Free Web Services spin down after 15 minutes of inactivity. Set up a free HTTP monitor at [UptimeRobot](https://uptimerobot.com) or [cron-job.org](https://cron-job.org) to ping `GET https://<your-service>.onrender.com/api/health` every 10 minutes to maintain persistent WebSocket connectivity.
 
 ---
 
 ### Option B: Hugging Face Spaces
 
-1. Create a **New Space** on [Hugging Face](https://huggingface.co/spaces).
-   - **SDK**: `Docker` (Blank template).
-   - **Port**: `7860` *(already configured in Dockerfile)*.
-2. Push this repository:
+1. Create a **New Space** on [Hugging Face Spaces](https://huggingface.co/spaces).
+   - **SDK**: `Docker` (Blank).
+   - **Port**: `7860` (already configured in [`Dockerfile`](Dockerfile)).
+2. Push your code:
    ```bash
-   git init
-   git remote add origin https://huggingface.co/spaces/YOUR_USERNAME/YOUR_SPACE_NAME
-   git add .
-   git commit -m "Deploy WhatsApp Gateway"
-   git push -u origin main
+   git remote add space https://huggingface.co/spaces/YOUR_USERNAME/YOUR_SPACE_NAME
+   git push -u space main
    ```
 3. In Space **Settings** &rarr; **Variables and secrets**, add `GATEWAY_API_KEY`.
-4. Open your Space URL, link your WhatsApp, and dispatch messages.
+4. Open your Space URL and link WhatsApp.
 
 ---
 
-## 🔑 API Key Authentication & Generation
+### Option C: Docker (Self-Hosted VPS / Server)
 
-Secure your gateway so only your authorized projects can dispatch messages.
+```bash
+# Build the production Docker image
+docker build -t whatsapp-gateway .
 
-### 1. How to Generate an API Key
-Generate a cryptographically secure random key with one command:
-
-- **Using Node.js:**
-  ```bash
-  node -e "console.log('wa_' + crypto.randomBytes(24).toString('hex'))"
-  ```
-- **Using PowerShell (Windows):**
-  ```powershell
-  "wa_" + [System.Guid]::NewGuid().ToString("N")
-  ```
-- **Using Bash / Linux / macOS:**
-  ```bash
-  openssl rand -hex 24
-  ```
-
-### 2. How to Configure the Key
-- **Locally:** In your `.env` file:
-  ```env
-  GATEWAY_API_KEY=wa_9f83a2b1c4e5d6f708192a3b4c5d6e7f8091a2b3c4d5e6f7
-  ```
-- **On Hugging Face Spaces:** Under Space **Settings** &rarr; **Variables and secrets** &rarr; **New secret**:
-  - Name: `GATEWAY_API_KEY`
-  - Value: `wa_9f83a2b1c4e5d6f708192a3b4c5d6e7f8091a2b3c4d5e6f7`
-
-### 3. Multiple Project Keys (Comma-Separated)
-You can specify multiple keys separated by commas in `GATEWAY_API_KEY` so each project has its own key:
-```env
-GATEWAY_API_KEY=key_store_app,key_crm_backend,key_python_scripts
+# Run container with persistent session volume
+docker run -d \
+  --name whatsapp-gateway \
+  -p 7860:7860 \
+  -v $(pwd)/data/auth_info:/app/data/auth_info \
+  -e GATEWAY_API_KEY="wa_my_secret_production_key" \
+  whatsapp-gateway
 ```
-Requests using any one of these keys will be accepted.
 
-### 4. How to Pass the Key in Requests
-The API accepts the key through any of these 3 methods:
-1. **`x-api-key` header** *(Recommended)*:
+---
+
+## 🔐 Authentication & API Key Governance
+
+### Passing Authentication in Requests
+
+The gateway validates client requests using timing-safe SHA-256 comparison. Provide your token via any of these methods:
+
+1. **`x-api-key` header** _(Recommended)_:
    ```http
-   x-api-key: YOUR_KEY
+   x-api-key: wa_live_...
    ```
 2. **Bearer Token header**:
    ```http
-   Authorization: Bearer YOUR_KEY
+   Authorization: Bearer wa_live_...
    ```
 3. **Query Parameter**:
    ```text
-   ?api_key=YOUR_KEY
+   ?api_key=wa_live_...
    ```
 
-*(If `GATEWAY_API_KEY` is left blank, authentication is bypassed for easy local development).*
+_(If no tokens exist and `GATEWAY_API_KEY` is not set in `.env`, the gateway operates in open development mode)._
 
 ---
 
 ## 📡 API Reference
 
-Base URL: `http://localhost:7860` or `https://YOUR_SPACE.hf.space`
+Base URL: `http://localhost:7860` (or your deployed cloud host)
 
-### 1. Send Messages
+### 1. Messaging Endpoints
 
-#### Single Message
-`POST /api/messages/send` *(or `POST /api/send-message`)*
+#### Single Text Message
 
-**Headers:**
-```http
-Content-Type: application/json
-x-api-key: YOUR_GATEWAY_API_KEY
-```
+`POST /api/messages/send` _(Alias: `POST /api/send-message`)_
 
 **Request Body:**
+
 ```json
 {
   "number": "201012345678",
-  "message": "Your order #1042 has shipped!"
+  "message": "Your verification code is 492019."
 }
 ```
-*Note: Accepts `number`, `phone`, `to`, or `phoneNumber` (digits with country code).*
+
+_Note: Accepts `number`, `phone`, `to`, or `phoneNumber` with country code digits._
 
 **Response (`200 OK`):**
+
 ```json
 {
   "success": true,
@@ -162,116 +179,163 @@ x-api-key: YOUR_GATEWAY_API_KEY
     "recipient": "201012345678",
     "messageId": "3EB09F2A9318",
     "status": "SENT",
-    "timestamp": "2026-09-12T01:00:00.000Z"
+    "timestamp": "2026-09-12T10:30:00.000Z"
   }
 }
 ```
 
-#### Bulk Messages
-`POST /api/messages/send-bulk`
-
-Sends sequentially with built-in anti-spam delay between dispatches.
-
-**Request Body:**
-```json
-{
-  "numbers": ["201012345678", "15551234567"],
-  "message": "Server maintenance scheduled for 10 PM tonight."
-}
-```
-
 #### Media & Document Dispatch
+
 `POST /api/messages/send-media`
 
-Sends images, PDFs, office documents, audio voice notes, or videos via URL or Base64.
+Supports `image`, `document`, `audio`, and `video` attachments via remote URL or Base64 string.
 
 **Request Body (via URL):**
+
 ```json
 {
   "number": "201012345678",
   "type": "document",
-  "mediaUrl": "https://example.com/invoice.pdf",
-  "fileName": "Invoice_1042.pdf",
-  "caption": "Your payment receipt"
+  "mediaUrl": "https://example.com/invoices/inv_1092.pdf",
+  "fileName": "Invoice_1092.pdf",
+  "caption": "Monthly statement attached."
 }
 ```
-*Supported `type` values: `image`, `document`, `audio`, `video`.*
 
----
+**Request Body (via Base64):**
 
-### 2. Token & Key Lifecycle Management
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/tokens` | List all active tokens (masked secrets, timestamps, usage) |
-| `POST` | `/api/tokens/generate` | Generate a new cryptographically secure token (`{"name": "CRM"}`) |
-| `DELETE` | `/api/tokens/:id` | Revoke an API token |
-
----
-
-### 3. Webhooks & Event Dispatch
-
-Configure outbound webhook delivery for incoming messages and delivery receipts (`X-Hub-Signature-256` HMAC signed):
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/webhooks/status` | Get webhook configuration and delivery stats |
-| `POST` | `/api/webhooks/configure` | Set or update webhook URL (`{"url": "https://..."}`) |
-| `POST` | `/api/webhooks/test` | Dispatch a ping test payload |
-
----
-
-### 4. Activity & Diagnostics Feed
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/activity` | Get recent message dispatches, statuses, and success rates |
-| `DELETE` | `/api/activity/clear` | Reset activity audit stream |
-
----
-
-### 5. OTP Verification
-
-#### Request OTP
-`POST /api/otp/send`
-
-Generates a secure 6-digit numeric OTP and delivers it via WhatsApp.
-
-**Request Body:**
 ```json
 {
   "number": "201012345678",
-  "appName": "My App",
+  "type": "image",
+  "mediaBase64": "data:image/png;base64,iVBORw0KGgo...",
+  "caption": "Screenshot preview"
+}
+```
+
+#### Bulk Messages
+
+`POST /api/messages/send-bulk`
+
+Dispatches sequentially with built-in spam-prevention throttling.
+
+**Request Body:**
+
+```json
+{
+  "numbers": ["201012345678", "15551234567"],
+  "message": "Important service announcement."
+}
+```
+
+---
+
+### 2. Token Governance Endpoints
+
+| Method   | Endpoint               | Description                                                              |
+| :------- | :--------------------- | :----------------------------------------------------------------------- |
+| `POST`   | `/api/tokens/generate` | Generate a new cryptographically secure bearer token (`{"name": "CRM"}`) |
+| `GET`    | `/api/tokens`          | List all active tokens with masked keys and creation timestamps          |
+| `DELETE` | `/api/tokens/:id`      | Immediately revoke and invalidate an API token                           |
+
+---
+
+### 3. Activity & Audit Feed Endpoints
+
+#### Get Paginated Activity Logs
+
+`GET /api/activity`
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `page` | `number` | `1` | Page number to retrieve (1-indexed) |
+| `limit` | `number` | `10` | Records per page (min 1, max 100) |
+| `type` | `string` | `ALL` | Filter by type: `ALL`, `TEXT`, `MEDIA`, `OTP_SEND`, `OTP_VERIFY` |
+| `status` | `string` | `ALL` | Filter by status: `ALL`, `SENT`, `FAILED`, `VERIFIED` |
+| `search` | `string` | `""` | Search query across recipient phone, preview text, error, or message ID |
+
+**Response (`200 OK`):**
+
+```json
+{
+  "success": true,
+  "stats": {
+    "total": 42,
+    "sent": 39,
+    "failed": 3,
+    "successRate": "93%"
+  },
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 42,
+    "totalPages": 5,
+    "hasNext": true,
+    "hasPrev": false
+  },
+  "data": [
+    {
+      "id": "act_8a12f3b9c0d1",
+      "timestamp": "2026-09-12T10:45:12.000Z",
+      "type": "TEXT",
+      "recipient": "201012345678",
+      "status": "SENT",
+      "messageId": "3EB047F19D",
+      "preview": "Your package has been delivered.",
+      "error": null,
+      "durationMs": 42
+    }
+  ]
+}
+```
+
+#### Delete Single Activity Record
+
+`DELETE /api/activity/:id`
+
+Deletes a specific activity log record by its ID. Returns `200 OK` on success or `404 Not Found`.
+
+#### Clear Activity Feed
+
+`DELETE /api/activity/clear`
+
+Permanently clears all activity records from storage.
+
+---
+
+### 4. OTP Verification Endpoints
+
+#### Request OTP Passcode
+
+`POST /api/otp/send`
+
+**Request Body:**
+
+```json
+{
+  "number": "201012345678",
+  "appName": "Secure Portal",
   "length": 6,
   "expiresInMinutes": 5
 }
 ```
 
-**Response (`200 OK`):**
-```json
-{
-  "success": true,
-  "message": "OTP code generated and dispatched via WhatsApp.",
-  "phoneNumber": "201012345678",
-  "expiresInSeconds": 300,
-  "messageId": "3EB09F2A9318"
-}
-```
+#### Verify OTP Passcode
 
-#### Verify OTP
 `POST /api/otp/verify`
 
-Validates user-submitted OTP code (invalidates after 3 wrong attempts or 5 min TTL).
-
 **Request Body:**
+
 ```json
 {
   "number": "201012345678",
-  "code": "481920"
+  "code": "839201"
 }
 ```
 
 **Response (`200 OK`):**
+
 ```json
 {
   "success": true,
@@ -282,146 +346,161 @@ Validates user-submitted OTP code (invalidates after 3 wrong attempts or 5 min T
 
 ---
 
-### 3. Device & Connection Management
+### 5. WhatsApp Instance & Device Linking
 
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/instance/status` | Connection status (`open`, `connecting`, `disconnected`) |
-| `GET` | `/api/instance/qr` | Get current base64 QR code |
-| `POST`| `/api/instance/pairing-code` | Request 8-digit pairing code (`{"number": "2010..."}`) |
-| `POST`| `/api/instance/connect` | Force socket reconnect |
-| `POST`| `/api/instance/restart` | Restart internal WhatsApp client |
-| `POST`| `/api/instance/logout` | Unlink device and reset session |
-| `GET` | `/api/health` | Container health and uptime check |
+| Method | Endpoint                     | Description                                                       |
+| :----- | :--------------------------- | :---------------------------------------------------------------- |
+| `GET`  | `/api/instance/status`       | Get connection status (`open`, `connecting`, `disconnected`)      |
+| `GET`  | `/api/instance/qr`           | Get current pairing QR code as base64 Data URL                    |
+| `POST` | `/api/instance/pairing-code` | Generate 8-digit phone pairing passcode (`{"number": "2010..."}`) |
+| `POST` | `/api/instance/connect`      | Force socket reconnect                                            |
+| `POST` | `/api/instance/restart`      | Restart internal Baileys client                                   |
+| `POST` | `/api/instance/logout`       | Unlink device and reset session credentials                       |
 
 ---
 
-## 💻 How to Call from Your Projects
+### 6. Outbound Webhooks
+
+| Method | Endpoint                  | Description                                               |
+| :----- | :------------------------ | :-------------------------------------------------------- |
+| `GET`  | `/api/webhooks/status`    | Check webhook delivery URL and statistics                 |
+| `POST` | `/api/webhooks/configure` | Configure external webhook URL (`{"url": "https://..."}`) |
+| `POST` | `/api/webhooks/test`      | Dispatch synthetic ping payload to test connectivity      |
+
+---
+
+### 7. Health & Monitoring
+
+| Method | Endpoint      | Description                                                       |
+| :----- | :------------ | :---------------------------------------------------------------- |
+| `GET`  | `/api/health` | Service liveness, container uptime, engine mode, and socket state |
+
+---
+
+## 💻 Integration Code Samples
 
 ### Python (`requests`)
+
 ```python
 import requests
 
-GATEWAY_URL = "https://YOUR_SPACE.hf.space"
-API_KEY = "wa_9f83a2b1c4e5d6f708192a3b4c5d6e7f8091a2b3c4d5e6f7"
+GATEWAY_URL = "http://localhost:7860"
+API_KEY = "wa_live_..."
 
-def send_whatsapp(number: str, text: str):
-    response = requests.post(
-        f"{GATEWAY_URL}/api/messages/send",
-        headers={
-            "Content-Type": "application/json",
-            "x-api-key": API_KEY
-        },
-        json={
-            "number": number,
-            "message": text
-        }
-    )
+def send_whatsapp_message(recipient_phone: str, text_message: str):
+    url = f"{GATEWAY_URL}/api/messages/send"
+    headers = {
+        "Content-Type": "application/json",
+        "x-api-key": API_KEY
+    }
+    payload = {
+        "number": recipient_phone,
+        "message": text_message
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
     return response.json()
 
-# Example:
-res = send_whatsapp("201012345678", "Hello from Python!")
+# Example dispatch:
+res = send_whatsapp_message("201012345678", "Hello from Python!")
 print(res)
 ```
 
-### Node.js / JavaScript (`fetch`)
-```javascript
-const GATEWAY_URL = "https://YOUR_SPACE.hf.space";
-const API_KEY = "wa_9f83a2b1c4e5d6f708192a3b4c5d6e7f8091a2b3c4d5e6f7";
+### Node.js / TypeScript (`fetch`)
 
-async function sendWhatsApp(number, message) {
-  const res = await fetch(`${GATEWAY_URL}/api/messages/send`, {
+```typescript
+const GATEWAY_URL = "http://localhost:7860";
+const API_KEY = "wa_live_...";
+
+async function sendWhatsApp(number: string, message: string) {
+  const response = await fetch(`${GATEWAY_URL}/api/messages/send`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": API_KEY
+      "x-api-key": API_KEY,
     },
-    body: JSON.stringify({ number, message })
+    body: JSON.stringify({ number, message }),
   });
-  return await res.json();
+
+  return await response.json();
 }
 
-// Example:
+// Example dispatch:
 sendWhatsApp("201012345678", "Hello from Node.js!").then(console.log);
 ```
 
 ### cURL
+
 ```bash
-curl -X POST "https://YOUR_SPACE.hf.space/api/messages/send" \
+curl -X POST "http://localhost:7860/api/messages/send" \
   -H "Content-Type: application/json" \
-  -H "x-api-key: wa_9f83a2b1c4e5d6f708192a3b4c5d6e7f8091a2b3c4d5e6f7" \
-  -d '{"number": "201012345678", "message": "Hello from cURL!"}'
+  -H "x-api-key: wa_live_..." \
+  -d '{
+    "number": "201012345678",
+    "message": "Hello from cURL!"
+  }'
 ```
 
 ---
 
 ## 📮 Postman Collection
 
-Import the included file into Postman for ready-to-use requests:
-📄 **`whatsapp-gateway.postman_collection.json`**
+The repository includes a ready-to-import Postman Collection:
+📄 **[`whatsapp-gateway.postman_collection.json`](./assets/whatsapp-gateway.postman_collection.json)**
 
-Set your collection variables under the **Variables** tab:
-- `baseUrl`: `http://localhost:7860` or your Space URL
-- `apiKey`: Your generated key
-- `recipientNumber`: Destination phone number
+### Included Folders:
+
+- **Messages**: Text, media, bulk, and alias endpoints.
+- **API Token Governance**: Generate, list, and revoke keys.
+- **Activity & Audit Feed**: Paginated logs with query filters, single-record deletion, and clear feed.
+- **OTP Verification**: Send and verify one-time passcodes.
+- **WhatsApp Instance & Device Linking**: Status, QR code, phone pairing, and disconnect.
+- **Webhooks**: Status, configuration, and test dispatch.
+- **System & Health**: Liveness check.
 
 ---
 
 ## ⚙️ Environment Variables
 
-| Variable | Default | Purpose |
-| :--- | :--- | :--- |
-| `PORT` | `7860` | Server listening port (HF Spaces default) |
-| `HOST` | `0.0.0.0` | Bind host address |
-| `GATEWAY_API_KEY` | *(empty)* | API key(s) to secure endpoints. Empty = open mode. Supports comma-separated keys |
-| `WHATSAPP_ENGINE` | `baileys` | `baileys` (embedded 1-container) or `evolution` (remote API) |
-| `SESSION_DATA_PATH`| `./data/auth_info` | Local directory where WhatsApp session keys persist |
-| `RATE_LIMIT_MAX` | `60` | Max requests per minute per IP |
+| Variable               | Default                      | Description                                                        |
+| :--------------------- | :--------------------------- | :----------------------------------------------------------------- |
+| `PORT`                 | `7860`                       | HTTP server listening port                                         |
+| `HOST`                 | `0.0.0.0`                    | Bind host address                                                  |
+| `NODE_ENV`             | `development`                | Runtime environment (`development`, `production`, `test`)          |
+| `WHATSAPP_ENGINE`      | `baileys`                    | Engine mode: `baileys` (embedded) or `evolution` (remote)          |
+| `SESSION_DATA_PATH`    | `./data/auth_info`           | Directory where WhatsApp session credentials persist               |
+| `GATEWAY_API_KEY`      | _(empty)_                    | Optional default API key. Supports comma-separated keys            |
+| `RATE_LIMIT_MAX`       | `60`                         | Max requests per rate limit window per IP                          |
+| `RATE_LIMIT_WINDOW_MS` | `60000`                      | Rate limit window duration in milliseconds (default 1 min)         |
+| `RECIPIENT_NUMBER`     | _(empty)_                    | Optional default recipient phone number for testing                |
+| `WEBHOOK_URL`          | _(empty)_                    | Outbound webhook URL for incoming messages and delivery receipts   |
+| `WEBHOOK_SECRET`       | _(empty)_                    | Secret key used to sign outbound webhook payloads with HMAC-SHA256 |
+| `EVOLUTION_API_URL`    | `http://localhost:8080`      | URL of remote Evolution API instance (if using Evolution engine)   |
+| `EVOLUTION_API_KEY`    | `my-super-secret-key-123456` | API key for remote Evolution API (if using Evolution engine)       |
+| `INSTANCE_NAME`        | `test-bot`                   | Instance identifier (if using Evolution engine)                    |
 
 ---
 
-## 🔒 Production & Reliability Tips
+## 🧪 Automated Testing
 
-1. **Keep Free Spaces Awake**:
-   Hugging Face Spaces sleep after inactivity on the free tier. Use a free service like [UptimeRobot](https://uptimerobot.com) to ping `GET /api/health` every 10 minutes to keep your container running 24/7.
-2. **Session Persistence**:
-   Auth keys are stored in `./data/auth_info/`. On Hugging Face Spaces with Persistent Storage attached to `/data`, set `SESSION_DATA_PATH=/data/auth_info` to ensure credentials survive full container rebuilds.
-3. **Anti-Ban Safety**:
-   - Use a dedicated SIM card for automation.
-   - Do not blast hundreds of messages on day one with a new number (warm it up gradually).
-   - Only message users who opted in to receive notifications.
+Run the automated integration test suite:
 
----
-
-## 📁 Project Structure
-
-```text
-├── Dockerfile                  # Single-container production build
-├── package.json                # Dependencies and npm scripts
-├── test-api.js                 # Automated API test suite
-├── whatsapp-gateway.postman_collection.json # Postman collection
-├── src/
-│   ├── server.js               # Entry point (port 7860)
-│   ├── app.js                  # Express middleware and routes
-│   ├── config/env.js           # Configuration loader
-│   ├── controllers/            # Route handlers (message, otp, instance, health)
-│   ├── middlewares/            # Auth (x-api-key), validation, rate limiter, errors
-│   ├── services/               # Baileys engine, OTP store, unified dispatcher
-│   └── public/                 # Web dashboard & QR pairing UI
-└── data/auth_info/             # WhatsApp session keys (persisted)
-```
-
----
-
-## 🧪 Testing
-
-Run the automated test suite locally:
 ```bash
 npm test
 ```
 
+The test suite validates health checks, UI static assets, token lifecycle, auth middlewares, input validation, messaging endpoints, OTP flows, webhooks, instance management, and paginated activity feed operations.
+
 ---
 
-## License
+## 🔒 Production Best Practices & Anti-Ban Safety
 
-MIT
+1. **Persistent Session Storage**: On cloud platforms with ephemeral disks (Docker containers or Hugging Face Spaces), attach persistent storage to `./data/auth_info/` so your connection survives container restarts.
+2. **Warm Up New Phone Numbers**: When using a newly registered WhatsApp number, ramp up volume gradually (e.g., 20-50 messages per day initially) rather than blasting hundreds of messages on day one.
+3. **Use Explicit Opt-In**: Only dispatch messages to users who explicitly opted in to avoid spam reports that trigger WhatsApp automated account restrictions.
+
+---
+
+## 📄 License
+
+MIT License. Designed and engineered for high-performance WhatsApp messaging automation.

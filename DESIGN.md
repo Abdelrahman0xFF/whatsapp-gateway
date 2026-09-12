@@ -7,6 +7,7 @@ colors:
   card: "#121b2b"
   card-hover: "#162237"
   terminal: "#060910"
+  qr-canvas: "#ffffff"
   border-subtle: "#1b263b"
   border-active: "#2a3b5c"
   primary: "#10b981"
@@ -14,26 +15,63 @@ colors:
   sky: "#38bdf8"
   sky-hover: "#0ea5e9"
   rose: "#f43f5e"
+  rose-hover: "#be123c"
+  rose-light: "#fda4af"
   amber: "#f59e0b"
   text-primary: "#f8fafc"
   text-secondary: "#cbd5e1"
   text-muted: "#94a3b8"
 typography:
+  display-huge:
+    fontFamily: "'JetBrains Mono', monospace"
+    fontSize: "32px"
+    fontWeight: 800
+    lineHeight: 1.2
   display:
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-    fontSize: "19px"
+    fontSize: "24px"
     fontWeight: 700
-    lineHeight: 1.3
+    lineHeight: 1.25
+  pin-digit:
+    fontFamily: "'JetBrains Mono', monospace"
+    fontSize: "20px"
+    fontWeight: 700
+    lineHeight: 1.2
+  heading:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    fontSize: "18px"
+    fontWeight: 700
+    lineHeight: 1.35
+  heading-sm:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    fontSize: "16px"
+    fontWeight: 700
+    lineHeight: 1.4
   body:
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-    fontSize: "15px"
+    fontSize: "14px"
     fontWeight: 400
     lineHeight: 1.6
+  input:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    fontSize: "14px"
+    fontWeight: 400
+    lineHeight: 1.5
   code:
     fontFamily: "'JetBrains Mono', monospace"
     fontSize: "13px"
     fontWeight: 400
     lineHeight: 1.55
+  caption:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    fontSize: "12px"
+    fontWeight: 500
+    lineHeight: 1.5
+  badge:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    fontSize: "11px"
+    fontWeight: 700
+    lineHeight: 1.2
 rounded:
   sm: "6px"
   md: "10px"

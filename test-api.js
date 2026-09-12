@@ -1,7 +1,7 @@
 import app from './src/app.js';
 import { ENV } from './src/config/env.js';
 
-const TEST_PORT = 7865;
+const TEST_PORT = process.env.TEST_PORT ? parseInt(process.env.TEST_PORT, 10) : 7865;
 
 async function runTests() {
   console.log('🧪 Starting WhatsApp REST Gateway Test Suite...\n');
@@ -104,13 +104,30 @@ async function runTests() {
     });
     assert(otpRes.status === 400, 'POST /api/otp/send validates missing phone number');
 
-    // 9. Activity Feed
-    const actRes = await fetch(`${baseUrl}/api/activity`);
+    // 9a. Activity Feed (Pagination & Stats)
+    const actRes = await fetch(`${baseUrl}/api/activity?page=1&limit=10`);
     const actData = await actRes.json();
     assert(
-      actRes.status === 200 && Array.isArray(actData.data) && actData.stats,
-      'GET /api/activity returns dispatch history and statistics'
+      actRes.status === 200 && Array.isArray(actData.data) && actData.stats && actData.pagination && actData.pagination.page === 1,
+      'GET /api/activity returns dispatch history with pagination metadata and stats'
     );
+
+    // 9b. Activity Feed Filtering
+    const filterRes = await fetch(`${baseUrl}/api/activity?page=1&limit=5&type=TEXT&status=SENT`);
+    const filterData = await filterRes.json();
+    assert(
+      filterRes.status === 200 && Array.isArray(filterData.data) && filterData.pagination.limit === 5,
+      'GET /api/activity?page=1&limit=5&type=TEXT filters activity records by query parameters'
+    );
+
+    // 9c. Activity Deletion (Single record)
+    const delActRes = await fetch(`${baseUrl}/api/activity/non_existent_id`, { method: 'DELETE' });
+    assert(delActRes.status === 404, 'DELETE /api/activity/:id returns 404 for unknown record');
+
+    // 9d. Activity Feed Clearing
+    const clearActRes = await fetch(`${baseUrl}/api/activity/clear`, { method: 'DELETE' });
+    const clearActData = await clearActRes.json();
+    assert(clearActRes.status === 200 && clearActData.success === true, 'DELETE /api/activity/clear clears activity audit storage');
 
     // 10. Webhooks status
     const whRes = await fetch(`${baseUrl}/api/webhooks/status`);
