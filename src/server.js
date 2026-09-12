@@ -1,8 +1,9 @@
 import app from './app.js';
 import { ENV } from './config/env.js';
 import { whatsappService } from './services/whatsapp.service.js';
-
 import { adminService } from './services/admin.service.js';
+import { tokenService } from './services/token.service.js';
+import { activityService } from './services/activity.service.js';
 
 const server = app.listen(ENV.PORT, ENV.HOST, async () => {
   console.log('\n======================================================');
@@ -25,8 +26,27 @@ const server = app.listen(ENV.PORT, ENV.HOST, async () => {
   }
 });
 
-function shutdown(signal) {
+async function shutdown(signal) {
   console.log(`\nReceived ${signal}. Shutting down gracefully...`);
+
+  try {
+    tokenService.flushSync();
+  } catch (err) {
+    console.error('Error flushing token store:', err.message);
+  }
+
+  try {
+    activityService.flushSync();
+  } catch (err) {
+    console.error('Error flushing activity store:', err.message);
+  }
+
+  try {
+    await whatsappService.destroy();
+  } catch (err) {
+    console.error('Error disconnecting WhatsApp engine:', err.message);
+  }
+
   server.close(() => {
     console.log('HTTP server closed.');
     process.exit(0);
@@ -40,3 +60,12 @@ function shutdown(signal) {
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 [Process] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('💥 [Process] Uncaught Exception:', err);
+});
+

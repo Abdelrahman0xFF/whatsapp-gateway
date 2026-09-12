@@ -149,7 +149,15 @@ Your one-time verification code is:
       return result;
     }
 
-    if (record.code === userCode.toString().trim()) {
+    const candidateStr = String(userCode || '').trim();
+    const isMatch = () => {
+      const bufA = Buffer.from(record.code);
+      const bufB = Buffer.from(candidateStr);
+      if (bufA.length !== bufB.length) return false;
+      return crypto.timingSafeEqual(bufA, bufB);
+    };
+
+    if (isMatch()) {
       this.store.delete(cleanNumber);
       const result = {
         success: true,

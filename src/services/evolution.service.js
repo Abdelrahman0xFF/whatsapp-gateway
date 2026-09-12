@@ -1,4 +1,5 @@
 import { ENV } from '../config/env.js';
+import { activityService } from './activity.service.js';
 
 class EvolutionService {
   constructor() {
@@ -131,19 +132,46 @@ class EvolutionService {
       text: text.trim()
     };
 
-    const response = await this._request(`message/sendText/${this.instanceName}`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-      timeout: 15000
-    });
+    const startTime = Date.now();
+    try {
+      const response = await this._request(`message/sendText/${this.instanceName}`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        timeout: 15000
+      });
 
-    return {
-      success: true,
-      recipient: cleanNumber,
-      messageId: response?.key?.id || response?.messageId || null,
-      status: response?.status || 'PENDING',
-      response
-    };
+      const messageId = response?.key?.id || response?.messageId || null;
+      const status = response?.status || 'SENT';
+      const durationMs = Date.now() - startTime;
+
+      activityService.log({
+        type: 'TEXT',
+        recipient: cleanNumber,
+        status: 'SENT',
+        messageId,
+        preview: text.trim(),
+        durationMs
+      });
+
+      return {
+        success: true,
+        recipient: cleanNumber,
+        messageId,
+        status,
+        response
+      };
+    } catch (err) {
+      const durationMs = Date.now() - startTime;
+      activityService.log({
+        type: 'TEXT',
+        recipient: cleanNumber,
+        status: 'FAILED',
+        preview: text.trim(),
+        error: err.message,
+        durationMs
+      });
+      throw err;
+    }
   }
 
   async logoutInstance() {

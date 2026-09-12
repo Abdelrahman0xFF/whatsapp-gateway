@@ -85,7 +85,7 @@
         <div>
           <div class="auth-headline-row">
             <span class="auth-headline">Client Request Authentication</span>
-            <span id="auth-mode-chip" class="auth-mode-chip auth-mode-open">Open Dev Mode</span>
+            <span id="auth-mode-chip" class="auth-mode-chip auth-mode-open">No Client Key Selected</span>
           </div>
           <div class="auth-subline">Protected by timing-safe SHA-256 validation via <code class="code-inline">x-api-key</code> or <code class="code-inline">Bearer &lt;token&gt;</code>.</div>
         </div>
@@ -93,7 +93,7 @@
       <div class="auth-input-group">
         <label for="client-api-key" class="auth-label">Active Session Key</label>
         <div class="input-action-wrapper">
-          <input type="password" id="client-api-key" class="mono-input" placeholder="wa_live_... (or blank for open mode)" autocomplete="off">
+          <input type="password" id="client-api-key" class="mono-input" placeholder="wa_live_... (click 'Use in Session' or paste key)" autocomplete="off">
           <button id="btn-clear-session-key" class="btn-input-icon" type="button" title="Clear key" style="display: none;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -695,7 +695,7 @@
         This WhatsApp Gateway instance is secured. Enter your Master Admin Key to unlock the developer cockpit, manage tokens, and view session telemetry.
       </p>
       
-      <form id="form-admin-login" onsubmit="event.preventDefault(); handleAdminUnlock();">
+      <form id="form-admin-login">
         <div class="admin-gate-input-wrap">
           <input type="password" id="input-admin-key" class="text-input mono-input" placeholder="Enter ADMIN_API_KEY or adm_live_..." autocomplete="current-password" required>
           <button id="btn-toggle-admin-key-vis" class="btn-input-icon" type="button" title="Toggle visibility">

@@ -1,6 +1,7 @@
 import app from './src/app.js';
 import { ENV } from './src/config/env.js';
 import { adminService } from './src/services/admin.service.js';
+import { baileysService } from './src/services/baileys.service.js';
 
 const TEST_PORT = process.env.TEST_PORT ? parseInt(process.env.TEST_PORT, 10) : 7865;
 
@@ -125,7 +126,19 @@ async function runTests() {
       'x-api-key': createdToken
     };
 
-    // 8. Auth Middleware with valid Client Token on Messaging API
+    // 8. Auth Middleware blocks missing API key on Messaging API
+    const noKeySendRes = await fetch(`${baseUrl}/api/messages/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ number: testPhoneNumber, message: 'Hello' })
+    });
+    const noKeySendData = await noKeySendRes.json();
+    assert(
+      noKeySendRes.status === 401 && noKeySendData.code === 'ERR_UNAUTHORIZED',
+      'POST /api/messages/send blocks callers without any API key with 401 Unauthorized'
+    );
+
+    // 9. Auth Middleware with valid Client Token on Messaging API
     const invalidSendRes = await fetch(`${baseUrl}/api/messages/send`, {
       method: 'POST',
       headers: clientAuthHeaders,
@@ -235,6 +248,76 @@ async function runTests() {
       body: JSON.stringify({ number: testPhoneNumber, message: 'Hello' })
     });
     assert(revokedSendRes.status === 403, 'POST /api/messages/send rejects revoked token with 403 Forbidden');
+
+    // 19. Security: Query Parameter Auth Rejection
+    const queryAuthRes = await fetch(`${baseUrl}/api/messages/send?api_key=${adminKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ number: testPhoneNumber, message: 'Hello' })
+    });
+    assert(queryAuthRes.status === 401, 'POST /api/messages/send?api_key=... rejects query parameter auth with 401');
+
+    // 20. Security: Helmet HTTP Headers
+    const helmetRes = await fetch(`${baseUrl}/api/health`);
+    assert(
+      helmetRes.headers.has('x-content-type-options') && helmetRes.headers.has('x-frame-options'),
+      'HTTP responses include Helmet security headers (x-content-type-options, x-frame-options)'
+    );
+
+    // 21. Security: SSRF Protection for Media Fetch
+    let ssrfBlocked = false;
+    try {
+      await baileysService._fetchMediaSafely('http://127.0.0.1:80/internal-secret');
+    } catch (err) {
+      if (err.message.includes('forbidden') || err.message.includes('local hostnames')) {
+        ssrfBlocked = true;
+      }
+    }
+    assert(ssrfBlocked, 'baileysService._fetchMediaSafely blocks SSRF requests to loopback/private IPs');
+
+    let metadataBlocked = false;
+    try {
+      await baileysService._fetchMediaSafely('http://169.254.169.254/latest/meta-data/');
+    } catch (err) {
+      if (err.message.includes('forbidden') || err.message.includes('metadata IP')) {
+        metadataBlocked = true;
+      }
+    }
+    assert(metadataBlocked, 'baileysService._fetchMediaSafely blocks SSRF requests to cloud metadata service');
+
+    // 22. Reliability: Async Bulk Messaging with 202 Accepted
+    const asyncBulkRes = await fetch(`${baseUrl}/api/messages/send-bulk`, {
+      method: 'POST',
+      headers: adminHeaders,
+      body: JSON.stringify({
+        numbers: [testPhoneNumber],
+        message: 'Bulk test',
+        async: true
+      })
+    });
+    const asyncBulkData = await asyncBulkRes.json();
+    assert(
+      asyncBulkRes.status === 202 && asyncBulkData.status === 'QUEUED' && asyncBulkData.batchId,
+      'POST /api/messages/send-bulk with async=true returns 202 Accepted with batchId'
+    );
+
+    // 23. Security: OTP Parameter Clamping & Newline Sanitization
+    const otpValidationRes = await fetch(`${baseUrl}/api/otp/send`, {
+      method: 'POST',
+      headers: adminHeaders,
+      body: JSON.stringify({
+        phoneNumber: testPhoneNumber,
+        appName: 'Test App\n\nSpoofing Attempt',
+        length: 9999,
+        expiresInMinutes: -50
+      })
+    });
+    // Should clamp bounds and not crash with RangeError
+    const otpValData = await otpValidationRes.json().catch(() => ({}));
+    assert(
+      otpValidationRes.status === 200 || otpValData.error?.includes('wait') || otpValData.error?.includes('WhatsApp is not connected'),
+      'POST /api/otp/send clamps length and expires bounds without throwing RangeError'
+    );
 
     console.log(`\n📊 Test Results: ${testsPassed}/${testsTotal} tests passed!`);
   } catch (err) {

@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { whatsappService } from '../services/whatsapp.service.js';
 
 class MessageController {
@@ -44,7 +45,7 @@ class MessageController {
 
   async sendBulk(req, res, next) {
     try {
-      const { numbers, message, messages } = req.body || {};
+      const { numbers, message, messages, async: runAsync = false, delayMs = 1000 } = req.body || {};
 
       let tasks = [];
       if (Array.isArray(messages) && messages.length > 0) {
@@ -65,48 +66,81 @@ class MessageController {
         });
       }
 
-      const results = [];
-      let sentCount = 0;
-      let failedCount = 0;
+      const batchId = `batch_${crypto.randomBytes(6).toString('hex')}`;
+      const safeDelay = Math.max(parseInt(delayMs, 10) || 1000, 500);
 
-      for (const item of tasks) {
-        const cleanNumber = String(item.number || item.phone || '').replace(/\D/g, '');
-        const text = item.message || item.text || message;
+      const processBatch = async () => {
+        const results = [];
+        let sentCount = 0;
+        let failedCount = 0;
 
-        if (!cleanNumber || !text) {
-          results.push({ number: item.number, success: false, error: 'Missing phone number or message' });
-          failedCount++;
-          continue;
+        for (const item of tasks) {
+          const cleanNumber = String(item.number || item.phone || '').replace(/\D/g, '');
+          const text = item.message || item.text || message;
+
+          if (!cleanNumber || !text) {
+            results.push({ number: item.number, success: false, error: 'Missing phone number or message' });
+            failedCount++;
+            continue;
+          }
+
+          try {
+            const sent = await whatsappService.sendTextMessage(cleanNumber, text);
+            results.push({
+              number: cleanNumber,
+              success: true,
+              messageId: sent.messageId
+            });
+            sentCount++;
+          } catch (err) {
+            results.push({
+              number: cleanNumber,
+              success: false,
+              error: err.message
+            });
+            failedCount++;
+          }
+
+          // Anti-ban randomized jitter delay between dispatches
+          const jitter = Math.floor(Math.random() * 400);
+          await new Promise(resolve => setTimeout(resolve, safeDelay + jitter));
         }
 
-        try {
-          const sent = await whatsappService.sendTextMessage(cleanNumber, text);
-          results.push({
-            number: cleanNumber,
-            success: true,
-            messageId: sent.messageId
-          });
-          sentCount++;
-        } catch (err) {
-          results.push({
-            number: cleanNumber,
-            success: false,
-            error: err.message
-          });
-          failedCount++;
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 400));
-      }
-
-      return res.status(200).json({
-        success: true,
-        summary: {
+        return {
+          batchId,
           total: tasks.length,
           sent: sentCount,
-          failed: failedCount
+          failed: failedCount,
+          results
+        };
+      };
+
+      if (runAsync) {
+        // Return 202 Accepted immediately to prevent HTTP proxy timeouts
+        processBatch().catch(err => {
+          console.error(`[MessageController] Bulk batch ${batchId} error:`, err);
+        });
+
+        return res.status(202).json({
+          success: true,
+          status: 'QUEUED',
+          message: 'Bulk dispatch accepted and processing asynchronously in background.',
+          batchId,
+          total: tasks.length
+        });
+      }
+
+      // Synchronous execution for smaller batches
+      const outcome = await processBatch();
+      return res.status(200).json({
+        success: true,
+        batchId: outcome.batchId,
+        summary: {
+          total: outcome.total,
+          sent: outcome.sent,
+          failed: outcome.failed
         },
-        results
+        results: outcome.results
       });
     } catch (error) {
       next(error);

@@ -61,7 +61,7 @@
                 "key": "x-api-key",
                 "value": "{{apiKey}}",
                 "type": "text",
-                "description": "API key configured in GATEWAY_API_KEY (optional in open mode)"
+                "description": "API key generated via Token Studio (/api/tokens)"
               }
             ],
             "body": {
@@ -113,7 +113,7 @@
                 "send-media"
               ]
             },
-            "description": "Dispatches an image, document/PDF, audio voice note, or video attachment via remote URL or Base64 with optional caption."
+            "description": "Dispatches an image, document/PDF, audio voice note, or video attachment via remote URL or Base64 with optional caption. Media URLs are protected by SSRF validation (internal/private/metadata IPs rejected). Maximum file size limit: 25MB (streamed safely)."
           },
           "response": []
         },
@@ -151,7 +151,7 @@
           "response": []
         },
         {
-          "name": "Send Bulk Messages",
+          "name": "Send Bulk Messages (Synchronous)",
           "request": {
             "method": "POST",
             "header": [
@@ -167,7 +167,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"numbers\": [\n    \"{{recipientNumber}}\",\n    \"15551234567\"\n  ],\n  \"message\": \"System update: Scheduled maintenance tonight at 10 PM UTC.\"\n}"
+              "raw": "{\n  \"numbers\": [\n    \"{{recipientNumber}}\",\n    \"15551234567\"\n  ],\n  \"message\": \"System update: Scheduled maintenance tonight at 10 PM UTC.\",\n  \"delayMs\": 1000\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/messages/send-bulk",
@@ -180,7 +180,41 @@
                 "send-bulk"
               ]
             },
-            "description": "Dispatches a message sequentially to an array of recipients with spam-prevention delays."
+            "description": "Dispatches a message sequentially to an array of recipients with anti-ban jitter delays."
+          },
+          "response": []
+        },
+        {
+          "name": "Send Bulk Messages (Async Background Queue)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"messages\": [\n    {\n      \"number\": \"{{recipientNumber}}\",\n      \"message\": \"Customer Notice A: Order #1042 shipped!\"\n    },\n    {\n      \"number\": \"15551234567\",\n      \"message\": \"Customer Notice B: Appointment reminder for tomorrow.\"\n    }\n  ],\n  \"async\": true,\n  \"delayMs\": 1500\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/send-bulk",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "send-bulk"
+              ]
+            },
+            "description": "Enqueues bulk messages for asynchronous background execution. Immediately returns HTTP 202 Accepted with a batchId to prevent proxy/gateway timeouts."
           },
           "response": []
         }
@@ -215,7 +249,7 @@
                 "verify"
               ]
             },
-            "description": "Validates Master Admin Key during dashboard authentication or external administrative workflows. Returns success confirmation, key source, and masked identifier."
+            "description": "Validates Master Admin Key during dashboard authentication or external administrative workflows. Enforces rate limiting (max 30 attempts per 15-minute window). Returns success confirmation, key source, and masked identifier."
           },
           "response": []
         },

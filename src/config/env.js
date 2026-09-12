@@ -16,14 +16,17 @@ export const ENV = {
   EVOLUTION_API_URL: (
     process.env.EVOLUTION_API_URL || "http://localhost:8080"
   ).replace(/\/+$/, ""),
-  EVOLUTION_API_KEY:
-    process.env.EVOLUTION_API_KEY || "my-super-secret-key-123456",
+  EVOLUTION_API_KEY: process.env.EVOLUTION_API_KEY || "",
   INSTANCE_NAME: process.env.INSTANCE_NAME || "test-bot",
   ADMIN_API_KEY: process.env.ADMIN_API_KEY || process.env.MASTER_API_KEY || "",
-  GATEWAY_API_KEY: process.env.GATEWAY_API_KEY || process.env.API_KEY || "",
   RATE_LIMIT_MAX: parseInt(process.env.RATE_LIMIT_MAX || "60", 10),
   RATE_LIMIT_WINDOW_MS: parseInt(
     process.env.RATE_LIMIT_WINDOW_MS || "60000",
+    10,
+  ),
+  ADMIN_RATE_LIMIT_MAX: parseInt(process.env.ADMIN_RATE_LIMIT_MAX || "30", 10),
+  ADMIN_RATE_LIMIT_WINDOW_MS: parseInt(
+    process.env.ADMIN_RATE_LIMIT_WINDOW_MS || "900000",
     10,
   ),
   DEFAULT_RECIPIENT: process.env.RECIPIENT_NUMBER || "",

@@ -35,18 +35,7 @@ class AdminService {
       return;
     }
 
-    // 2. Fallback to GATEWAY_API_KEY if present in environment
-    if (ENV.GATEWAY_API_KEY && ENV.GATEWAY_API_KEY.trim()) {
-      const firstKey = ENV.GATEWAY_API_KEY.split(',')[0].trim();
-      if (firstKey) {
-        this.adminKey = firstKey;
-        this.keySource = 'gateway_env';
-        this.initialized = true;
-        return;
-      }
-    }
-
-    // 3. Persistent auto-generated key stored in data directory
+    // 2. Persistent auto-generated key stored in data directory
     try {
       if (fs.existsSync(this.secretPath)) {
         const storedKey = fs.readFileSync(this.secretPath, 'utf-8').trim();
@@ -108,8 +97,6 @@ class AdminService {
 
     if (this.keySource === 'env') {
       console.log(`🛡️  Master Admin Auth: ENABLED (Source: ADMIN_API_KEY environment variable)`);
-    } else if (this.keySource === 'gateway_env') {
-      console.log(`🛡️  Master Admin Auth: ENABLED (Source: GATEWAY_API_KEY fallback)`);
     } else {
       console.log('------------------------------------------------------');
       console.log('🛡️  [SECURITY] Auto-generated Master Admin Key:');
@@ -117,16 +104,6 @@ class AdminService {
       console.log('Use this key to unlock the Web Cockpit and manage API tokens.');
       console.log(`Persisted to: ${this.secretPath}`);
       console.log('------------------------------------------------------');
-    }
-
-    if (ENV.ALLOWED_NUMBERS && ENV.ALLOWED_NUMBERS.length > 0) {
-      console.log(`🛡️  Anti-Ban Safeguard: ACTIVE (${ENV.ALLOWED_NUMBERS.length} whitelisted number(s))`);
-    } else {
-      console.log(`⚠️  Anti-Ban Safeguard: OPEN (Set ALLOWED_NUMBERS in .env to prevent ban risk)`);
-    }
-
-    if (ENV.SAFE_MODE) {
-      console.log(`🧪 Safe Mode (Sandbox): ACTIVE (Dispatches simulated; WhatsApp network protected)`);
     }
   }
 }

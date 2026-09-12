@@ -2,12 +2,15 @@ services:
   - type: web
     name: whatsapp-gateway
     runtime: docker
-    plan: free
+    plan: starter
     healthCheckPath: /api/health
+    disk:
+      name: whatsapp-data
+      mountPath: /app/data
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
       - key: ADMIN_API_KEY
         generateValue: true
-      - key: GATEWAY_API_KEY
-        generateValue: true
+

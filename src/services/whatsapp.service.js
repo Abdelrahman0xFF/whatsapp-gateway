@@ -54,6 +54,12 @@ class WhatsAppService {
   restartInstance() {
     return this.activeService.restartInstance ? this.activeService.restartInstance() : this.activeService.logoutInstance();
   }
+
+  async destroy() {
+    if (this.activeService.destroy) {
+      await this.activeService.destroy();
+    }
+  }
 }
 
 export const whatsappService = new WhatsAppService();

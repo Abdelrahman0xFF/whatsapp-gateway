@@ -30,18 +30,26 @@ class ActivityService {
   _debouncedSave() {
     if (this.saveTimeout) clearTimeout(this.saveTimeout);
     this.saveTimeout = setTimeout(() => {
-      try {
-        const dir = path.dirname(this.storagePath);
-        if (!fs.existsSync(dir)) {
-          fs.mkdirSync(dir, { recursive: true });
-        }
-        const tmpPath = `${this.storagePath}.tmp`;
-        fs.writeFileSync(tmpPath, JSON.stringify(this.activities, null, 2), 'utf-8');
-        fs.renameSync(tmpPath, this.storagePath);
-      } catch (err) {
-        console.error('[ActivityService] Error saving activity:', err.message);
-      }
+      this.flushSync();
     }, 500);
+  }
+
+  flushSync() {
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
+    }
+    try {
+      const dir = path.dirname(this.storagePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      const tmpPath = `${this.storagePath}.tmp`;
+      fs.writeFileSync(tmpPath, JSON.stringify(this.activities, null, 2), { encoding: 'utf-8', mode: 0o600 });
+      fs.renameSync(tmpPath, this.storagePath);
+    } catch (err) {
+      console.error('[ActivityService] Error saving activity:', err.message);
+    }
   }
 
   log({ type, recipient, status, messageId, preview, error, durationMs }) {

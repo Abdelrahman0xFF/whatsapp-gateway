@@ -53,11 +53,21 @@ export function validateRequestOtp(req, res, next) {
     });
   }
 
+  const cleanAppName = typeof body.appName === 'string'
+    ? body.appName.replace(/[\r\n\t]/g, ' ').trim().slice(0, 50) || 'My App'
+    : 'My App';
+
+  const rawLength = parseInt(body.length, 10);
+  const length = (!isNaN(rawLength) && rawLength >= 4 && rawLength <= 10) ? rawLength : 6;
+
+  const rawExpiry = parseInt(body.expiresInMinutes, 10);
+  const expiresInMinutes = (!isNaN(rawExpiry) && rawExpiry >= 1 && rawExpiry <= 60) ? rawExpiry : 5;
+
   req.validated = {
     number: cleanNumber,
-    appName: body.appName || 'My App',
-    length: parseInt(body.length || '6', 10),
-    expiresInMinutes: parseInt(body.expiresInMinutes || '5', 10)
+    appName: cleanAppName,
+    length,
+    expiresInMinutes
   };
 
   next();
@@ -130,13 +140,16 @@ export function validateSendMedia(req, res, next) {
     });
   }
 
+  const rawFileName = body.fileName ? String(body.fileName).trim() : '';
+  const safeFileName = rawFileName ? rawFileName.replace(/[\\/]/g, '_').slice(0, 100) : '';
+
   req.validated = {
     number: cleanNumber,
     type,
     mediaUrl: mediaUrl || null,
     mediaBase64: mediaBase64 || null,
     caption: body.caption ? String(body.caption).trim() : '',
-    fileName: body.fileName ? String(body.fileName).trim() : '',
+    fileName: safeFileName,
     mimetype: body.mimetype ? String(body.mimetype).trim() : '',
     ptt: Boolean(body.ptt)
   };

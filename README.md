@@ -11,7 +11,7 @@ Runs in a **single Docker container** with **zero external database dependencies
 - **🚀 Single-Container Architecture**: Self-contained with local atomic JSON storage; deploys anywhere in minutes.
 - **🖥️ Developer Cockpit**: High-density developer dashboard featuring an upper operational deck, an integrated testing console with live response & code generator, and a dedicated full-width paginated audit feed.
 - **📱 Dual Pairing Modes**: Connect via high-contrast QR code scan or 8-digit phone pairing code (no camera scan required).
-- **🔑 Cryptographic Key Governance**: Generate and revoke `wa_live_...` tokens with timing-safe SHA-256 validation. Supports multiple project keys and open dev mode.
+- **🔑 Cryptographic Key Governance**: Generate and revoke `wa_live_...` tokens with timing-safe SHA-256 validation. Supports multiple project keys and strict zero-trust isolation.
 - **💬 Rich Dispatch Suite**: Send plain text, bulk messages with anti-spam rate limiting, and rich media (images, PDFs, documents, voice notes, video) via URL or Base64.
 - **🔐 One-Time Password (OTP) Engine**: Built-in 6-digit OTP delivery and verification with automated expiration windows and anti-bombing cooldowns.
 - **📊 Real-Time Observability Deck**: Complete activity feed with server-side pagination, search filtering, type/status filters, and live auto-polling.
@@ -108,20 +108,39 @@ The repository includes a [`render.yaml`](render.yaml) blueprint ready for 1-cli
 
 ---
 
-### Option C: Docker (Self-Hosted VPS / Server)
+### Option C: Standalone Docker (`docker run`)
 
 ```bash
 # Build the production Docker image
 docker build -t whatsapp-gateway .
 
-# Run container with persistent session volume and Admin Key
+# Run container with persistent data volume and restart policy
 docker run -d \
   --name whatsapp-gateway \
+  --restart unless-stopped \
   -p 7860:7860 \
-  -v $(pwd)/data/auth_info:/app/data/auth_info \
   -v $(pwd)/data:/app/data \
-  -e ADMIN_API_KEY="wa_admin_my_secret_production_key" \
+  --env-file .env \
   whatsapp-gateway
+```
+*(On Windows PowerShell, replace `$(pwd)` with `${PWD}`)*
+
+---
+
+### Option D: PM2 (Node.js Process Manager for VPS / Bare Metal)
+
+For native Node.js environments on Ubuntu, Debian, or Windows Server:
+
+```bash
+# 1. Install PM2 globally
+npm install -g pm2
+
+# 2. Start the gateway with automatic restarts and memory threshold
+pm2 start src/server.js --name whatsapp-gateway --max-memory-restart 500M
+
+# 3. Configure PM2 to start automatically on system reboot
+pm2 startup
+pm2 save
 ```
 
 ---
@@ -149,6 +168,10 @@ Client tokens are generated inside the Developer Cockpit Token Studio for downst
   x-api-key: wa_live_...
   ```
   _(or `Authorization: Bearer wa_live_...`)_
+
+> [!IMPORTANT]
+> **Strict Header-Only Authentication**: For production security, passing tokens via URL query parameters (`?api_key=...` or `?admin_key=...`) is rejected with `401 Unauthorized` to prevent credentials from leaking into reverse proxy logs, browser histories, and HTTP Referer headers. Always supply credentials in HTTP headers.
+
 
 ---
 
@@ -217,18 +240,47 @@ Supports `image`, `document`, `audio`, and `video` attachments via remote URL or
 }
 ```
 
+> [!NOTE]
+> **SSRF Protection & Limits**: URLs pointing to loopback (`127.0.0.1`, `localhost`), private network ranges (`10.x`, `172.16-31.x`, `192.168.x`), or cloud metadata endpoints (`169.254.169.254`) are blocked. Maximum media attachment size is 25MB (streamed safely).
+
 #### Bulk Messages
 
 `POST /api/messages/send-bulk`
 
-Dispatches sequentially with built-in spam-prevention throttling.
+Dispatches sequentially or in the background with anti-ban jitter delays.
 
-**Request Body:**
+**Request Body (Synchronous Batch):**
 
 ```json
 {
   "numbers": ["201012345678", "15551234567"],
-  "message": "Important service announcement."
+  "message": "Important service announcement.",
+  "delayMs": 1000
+}
+```
+
+**Request Body (Asynchronous Queue — Recommended for larger batches):**
+
+```json
+{
+  "messages": [
+    { "number": "201012345678", "message": "Notice for Customer A" },
+    { "number": "15551234567", "message": "Notice for Customer B" }
+  ],
+  "async": true,
+  "delayMs": 1500
+}
+```
+
+**Response (`202 Accepted` when `async: true`):**
+
+```json
+{
+  "success": true,
+  "status": "QUEUED",
+  "message": "Bulk dispatch accepted and processing asynchronously in background.",
+  "batchId": "batch_9f1a2b3c4d5e",
+  "total": 2
 }
 ```
 
@@ -381,6 +433,15 @@ Permanently clears all activity records from storage.
 
 ---
 
+### 8. Master Admin Endpoints
+
+| Method | Endpoint            | Auth Required | Description                                                                 |
+| :----- | :------------------ | :------------ | :-------------------------------------------------------------------------- |
+| `POST` | `/api/admin/verify` | None          | Verify Master Admin Key to unlock Cockpit (rate-limited to 30 req / 15 min) |
+| `GET`  | `/api/admin/status` | Master Admin  | Check current admin session authentication status                           |
+
+---
+
 ## 💻 Integration Code Samples
 
 ### Python (`requests`)
@@ -474,7 +535,6 @@ The repository includes a ready-to-import Postman Collection:
 | `WHATSAPP_ENGINE`      | `baileys`                    | Engine mode: `baileys` (embedded) or `evolution` (remote)          |
 | `SESSION_DATA_PATH`    | `./data/auth_info`           | Directory where WhatsApp session credentials persist               |
 | `ADMIN_API_KEY`        | _(auto-generated)_           | Master Admin Key for Web Cockpit, key management, QR code, and logs|
-| `GATEWAY_API_KEY`      | _(empty)_                    | Optional client default/fallback API key (comma-separated)         |
 | `RATE_LIMIT_MAX`       | `60`                         | Max requests per rate limit window per IP                          |
 | `RATE_LIMIT_WINDOW_MS` | `60000`                      | Rate limit window duration in milliseconds (default 1 min)         |
 | `WHITELIST_PHONE_NUMBER`| `201012345678`              | Whitelist phone number used in tests and shown as UI placeholder   |

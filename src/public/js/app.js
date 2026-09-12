@@ -169,8 +169,18 @@ const DOM = {
 /* ==========================================================================
    TOAST NOTIFICATION ENGINE
    ========================================================================== */
+let lastToastMessage = '';
+let lastToastTime = 0;
+
 function showToast(message, type = 'info', durationMs = 3500) {
   if (!DOM.toastContainer) return;
+
+  const now = Date.now();
+  if (lastToastMessage === message && (now - lastToastTime) < 600) {
+    return; // Suppress duplicate identical toast within rapid window
+  }
+  lastToastMessage = message;
+  lastToastTime = now;
 
   const toast = document.createElement('div');
   toast.className = `toast-item toast-${type}`;
@@ -424,9 +434,6 @@ function renderTokensTable(tokens) {
       `;
     } else {
       actionsHtml = `
-        <button class="btn btn-ghost btn-xs" title="Apply to active cockpit session" onclick="useTokenInSession('${t.maskedToken}')">
-          Use
-        </button>
         <button class="btn btn-ghost btn-xs btn-ghost-danger" title="Revoke API key" onclick="promptRevokeToken('${t.id}')">
           Revoke
         </button>
@@ -475,12 +482,16 @@ async function executeRevokeToken(id) {
   }
 }
 
-function useTokenInSession(maskedOrFullToken) {
-  DOM.clientApiKeyInput.value = maskedOrFullToken;
+function useTokenInSession(token) {
+  if (!token || token.includes('...')) {
+    showToast('Cannot use a masked key. Please copy the full secret when created.', 'error');
+    return;
+  }
+  DOM.clientApiKeyInput.value = token;
   DOM.clientApiKeyInput.type = 'text';
   updateAuthModeStatus();
   updateSnippets();
-  showToast(`Token applied to active cockpit session!`, 'success');
+  showToast('Token applied to active cockpit session!', 'success');
 }
 
 async function handleGenerateToken() {
@@ -525,7 +536,7 @@ function updateAuthModeStatus() {
     DOM.btnClearSessionKey.style.display = 'flex';
   } else {
     DOM.authModeChip.className = 'auth-mode-chip auth-mode-open';
-    DOM.authModeChip.innerText = 'Open Dev Mode';
+    DOM.authModeChip.innerText = 'No Client Key Selected';
     DOM.btnClearSessionKey.style.display = 'none';
   }
 }
@@ -534,7 +545,7 @@ function clearSessionKey() {
   DOM.clientApiKeyInput.value = '';
   updateAuthModeStatus();
   updateSnippets();
-  showToast('Reverted session to open mode.', 'info');
+  showToast('Client session key cleared.', 'info');
 }
 
 function getAdminHeaders() {
@@ -549,10 +560,8 @@ function getAdminHeaders() {
 function getAuthHeaders() {
   const headers = { 'Content-Type': 'application/json' };
   const clientKey = DOM.clientApiKeyInput?.value?.trim();
-  const adminKey = STATE.adminKey || sessionStorage.getItem('wa_admin_key') || '';
-  const key = clientKey || adminKey;
-  if (key) {
-    headers['x-api-key'] = key;
+  if (clientKey) {
+    headers['x-api-key'] = clientKey;
   }
   return headers;
 }
@@ -588,7 +597,13 @@ async function verifyAdminKey(key, silent = false) {
   }
 }
 
-async function handleAdminUnlock() {
+let isVerifyingAdmin = false;
+
+async function handleAdminUnlock(e) {
+  if (e && typeof e.preventDefault === 'function') {
+    e.preventDefault();
+  }
+  if (isVerifyingAdmin) return;
   if (!DOM.inputAdminKey) return;
   const key = DOM.inputAdminKey.value.trim();
   if (!key) {
@@ -596,6 +611,7 @@ async function handleAdminUnlock() {
     return;
   }
 
+  isVerifyingAdmin = true;
   if (DOM.btnAdminUnlock) DOM.btnAdminUnlock.disabled = true;
   if (DOM.adminGateError) DOM.adminGateError.style.display = 'none';
 
@@ -613,6 +629,7 @@ async function handleAdminUnlock() {
       }
     }
   } finally {
+    isVerifyingAdmin = false;
     if (DOM.btnAdminUnlock) DOM.btnAdminUnlock.disabled = false;
   }
 }

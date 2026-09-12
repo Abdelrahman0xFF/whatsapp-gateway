@@ -1,16 +1,43 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import crypto from 'node:crypto';
 import { ENV } from '../config/env.js';
 
 class WebhookService {
   constructor() {
+    this.storagePath = path.resolve('./data/webhook_config.json');
     this.webhookUrl = ENV.WEBHOOK_URL;
     this.secret = ENV.WEBHOOK_SECRET;
     this.deliveredCount = 0;
     this.failedCount = 0;
+    this._load();
+  }
+
+  _load() {
+    try {
+      if (fs.existsSync(this.storagePath)) {
+        const raw = fs.readFileSync(this.storagePath, 'utf-8');
+        const data = JSON.parse(raw || '{}');
+        if (data.url !== undefined) {
+          this.webhookUrl = data.url;
+        }
+      }
+    } catch (err) {
+      console.error('[WebhookService] Error loading webhook config:', err.message);
+    }
   }
 
   setWebhookUrl(url) {
     this.webhookUrl = url;
+    try {
+      const dir = path.dirname(this.storagePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(this.storagePath, JSON.stringify({ url: this.webhookUrl }, null, 2), 'utf-8');
+    } catch (err) {
+      console.error('[WebhookService] Error saving webhook config:', err.message);
+    }
   }
 
   getStatus() {

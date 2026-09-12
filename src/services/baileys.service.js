@@ -8,9 +8,44 @@ import QRCode from 'qrcode';
 import pino from 'pino';
 import fs from 'node:fs';
 import path from 'node:path';
+import dns from 'node:dns/promises';
+import net from 'node:net';
 import { ENV } from '../config/env.js';
 import { activityService } from './activity.service.js';
 import { webhookService } from './webhook.service.js';
+
+function isPrivateOrReservedIp(ip) {
+  if (net.isIPv4(ip)) {
+    const parts = ip.split('.').map(Number);
+    if (parts.length !== 4 || parts.some(p => isNaN(p) || p < 0 || p > 255)) return true;
+    const [a, b] = parts;
+    if (a === 0 || a === 127 || a === 10) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 100 && b >= 64 && b <= 127) return true;
+    if (a >= 224) return true;
+    return false;
+  }
+  if (net.isIPv6(ip)) {
+    const normalized = ip.toLowerCase();
+    if (normalized === '::1' || normalized === '::') return true;
+    if (normalized.startsWith('::ffff:')) {
+      return isPrivateOrReservedIp(normalized.slice(7));
+    }
+    if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true;
+    if (
+      normalized.startsWith('fe80') ||
+      normalized.startsWith('fe9') ||
+      normalized.startsWith('fea') ||
+      normalized.startsWith('feb')
+    ) {
+      return true;
+    }
+    return false;
+  }
+  return true;
+}
 
 class BaileysService {
   constructor() {
@@ -290,29 +325,22 @@ class BaileysService {
     const startTime = Date.now();
 
     let buffer;
+    let resolvedMimetype = mimetype;
+
     if (mediaBase64) {
       const cleanBase64 = mediaBase64.replace(/^data:([a-zA-Z0-9/+-]+);base64,/, '');
       buffer = Buffer.from(cleanBase64, 'base64');
+      if (buffer.length > 25 * 1024 * 1024) {
+        throw new Error('Media file exceeds maximum size limit of 25MB.');
+      }
     } else if (mediaUrl) {
-      try {
-        const response = await fetch(mediaUrl, { signal: AbortSignal.timeout(15000) });
-        if (!response.ok) {
-          throw new Error(`Failed to download media from URL (HTTP ${response.status})`);
-        }
-        const arrayBuffer = await response.arrayBuffer();
-        buffer = Buffer.from(arrayBuffer);
-        if (!mimetype) {
-          mimetype = response.headers.get('content-type') || undefined;
-        }
-      } catch (e) {
-        throw new Error(`Could not fetch media from URL: ${e.message}`);
+      const downloaded = await this._fetchMediaSafely(mediaUrl, 25 * 1024 * 1024);
+      buffer = downloaded.buffer;
+      if (!resolvedMimetype && downloaded.mimetype) {
+        resolvedMimetype = downloaded.mimetype;
       }
     } else {
       throw new Error('Either "mediaUrl" or "mediaBase64" is required to send media.');
-    }
-
-    if (buffer.length > 25 * 1024 * 1024) {
-      throw new Error('Media file exceeds maximum size limit of 25MB.');
     }
 
     let payload = {};
@@ -320,26 +348,26 @@ class BaileysService {
       payload = {
         image: buffer,
         caption: caption || undefined,
-        mimetype: mimetype || 'image/jpeg'
+        mimetype: resolvedMimetype || 'image/jpeg'
       };
     } else if (mediaType === 'document') {
       payload = {
         document: buffer,
         caption: caption || undefined,
-        mimetype: mimetype || 'application/pdf',
+        mimetype: resolvedMimetype || 'application/pdf',
         fileName: fileName || 'document.pdf'
       };
     } else if (mediaType === 'audio') {
       payload = {
         audio: buffer,
-        mimetype: mimetype || 'audio/mp4',
+        mimetype: resolvedMimetype || 'audio/mp4',
         ptt: Boolean(ptt)
       };
     } else if (mediaType === 'video') {
       payload = {
         video: buffer,
         caption: caption || undefined,
-        mimetype: mimetype || 'video/mp4'
+        mimetype: resolvedMimetype || 'video/mp4'
       };
     } else {
       throw new Error(`Unsupported media type "${type}". Allowed: image, document, audio, video.`);
@@ -399,6 +427,105 @@ class BaileysService {
       success: true,
       message: 'Logged out successfully. Generating fresh pairing credentials...'
     };
+  }
+
+  async _fetchMediaSafely(mediaUrl, maxBytes = 25 * 1024 * 1024) {
+    let currentUrl = mediaUrl;
+    let response;
+    const maxRedirects = 3;
+
+    for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount++) {
+      let parsedUrl;
+      try {
+        parsedUrl = new URL(currentUrl);
+      } catch {
+        throw new Error('Invalid media URL provided.');
+      }
+
+      if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+        throw new Error('Only HTTP and HTTPS URLs are supported for media attachments.');
+      }
+
+      const hostname = parsedUrl.hostname;
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+        throw new Error('Access to local hostnames is forbidden.');
+      }
+
+      // Resolve DNS to verify IP is not in private/reserved/cloud-metadata space
+      try {
+        const addresses = await dns.lookup(hostname, { all: true });
+        for (const addr of addresses) {
+          if (isPrivateOrReservedIp(addr.address)) {
+            throw new Error('Access to internal, private, or metadata IP addresses is forbidden.');
+          }
+        }
+      } catch (dnsErr) {
+        if (dnsErr.message.includes('forbidden')) throw dnsErr;
+        throw new Error(`DNS resolution failed for media host "${hostname}": ${dnsErr.message}`);
+      }
+
+      response = await fetch(currentUrl, {
+        signal: AbortSignal.timeout(20000),
+        redirect: 'manual'
+      });
+
+      // Safely validate and follow HTTP redirects (301, 302, 303, 307, 308)
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location');
+        if (!location) {
+          throw new Error(`Redirect response (HTTP ${response.status}) missing Location header.`);
+        }
+        if (redirectCount === maxRedirects) {
+          throw new Error('Too many HTTP redirects encountered while fetching media.');
+        }
+        currentUrl = new URL(location, currentUrl).href;
+        continue;
+      }
+
+      break;
+    }
+
+    if (!response.ok) {
+      throw new Error(`Failed to download media from URL (HTTP ${response.status})`);
+    }
+
+    const contentLength = parseInt(response.headers.get('content-length') || '0', 10);
+    if (contentLength > maxBytes) {
+      throw new Error(`Media file exceeds maximum size limit of ${Math.round(maxBytes / (1024 * 1024))}MB.`);
+    }
+
+    if (!response.body) {
+      throw new Error('Response body is empty or unavailable.');
+    }
+
+    // Stream download with byte counter to prevent memory exhaustion DoS
+    const reader = response.body.getReader();
+    const chunks = [];
+    let totalBytes = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.length;
+      if (totalBytes > maxBytes) {
+        try {
+          await reader.cancel();
+        } catch {}
+        throw new Error(`Media file exceeds maximum size limit of ${Math.round(maxBytes / (1024 * 1024))}MB.`);
+      }
+      chunks.push(value);
+    }
+
+    const buffer = Buffer.concat(chunks);
+    const contentType = response.headers.get('content-type') || undefined;
+
+    return { buffer, mimetype: contentType };
+  }
+
+  async destroy() {
+    console.log('[WhatsApp Engine] Closing active WhatsApp connections...');
+    this._cleanupCurrentSocket();
+    this.connectionState = 'disconnected';
   }
 
   async clearAuthFolder() {

@@ -11,3 +11,5 @@ docker-compose*.yml
 Dockerfile
 README.md
 test-api.js
+data/
+data

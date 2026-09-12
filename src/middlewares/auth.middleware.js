@@ -3,14 +3,13 @@ import { adminService } from '../services/admin.service.js';
 
 function extractCandidateKey(req) {
   const authHeader = req.headers['authorization'] || '';
-  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : null;
+  const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+  const bearerToken = bearerMatch ? bearerMatch[1].trim() : null;
 
   return (
     req.headers['x-admin-key'] ||
     req.headers['x-api-key'] ||
     req.headers['apikey'] ||
-    req.query.api_key ||
-    req.query.admin_key ||
     bearerToken ||
     ''
   );

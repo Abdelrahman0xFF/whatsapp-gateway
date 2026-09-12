@@ -6,7 +6,10 @@ export function notFoundHandler(req, res, next) {
 }
 
 export function errorHandler(err, req, res, next) {
-  const statusCode = err.status || err.statusCode || 500;
+  let statusCode = parseInt(err.status || err.statusCode || '500', 10);
+  if (isNaN(statusCode) || statusCode < 100 || statusCode > 599) {
+    statusCode = 500;
+  }
   const message = err.message || 'Internal Server Error';
 
   console.error(`[Error] [${req.method} ${req.originalUrl}] ${statusCode}:`, err);

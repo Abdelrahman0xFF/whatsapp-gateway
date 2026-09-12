@@ -29,10 +29,8 @@ class HealthController {
         mode: ENV.WHATSAPP_ENGINE === 'baileys' ? 'embedded (1-container)' : 'remote-evolution'
       },
       auth: {
-        apiKeyProtected: tokenService.hasKeys(),
-        tokenCount: tokenService.listTokens().length
-      },
-      stats: activityService.getStats()
+        apiKeyProtected: tokenService.hasKeys()
+      }
     });
   }
 }

@@ -17,10 +17,28 @@ class WebhookController {
       });
     }
 
-    webhookService.setWebhookUrl(url ? url.trim() : '');
+    const trimmedUrl = url ? url.trim() : '';
+    if (trimmedUrl) {
+      try {
+        const parsed = new URL(trimmedUrl);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          return res.status(400).json({
+            success: false,
+            error: 'Webhook URL must use HTTP or HTTPS protocol.'
+          });
+        }
+      } catch {
+        return res.status(400).json({
+          success: false,
+          error: 'Malformed webhook URL provided.'
+        });
+      }
+    }
+
+    webhookService.setWebhookUrl(trimmedUrl);
     return res.status(200).json({
       success: true,
-      message: url ? 'Webhook URL updated successfully.' : 'Webhook disabled.',
+      message: trimmedUrl ? 'Webhook URL updated successfully.' : 'Webhook disabled.',
       data: webhookService.getStatus()
     });
   }

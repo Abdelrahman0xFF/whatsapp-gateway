@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { adminService } from '../services/admin.service.js';
 import { adminAuth } from '../middlewares/auth.middleware.js';
+import { adminRateLimiter } from '../middlewares/rateLimiter.middleware.js';
 
 const router = Router();
 
-router.post('/verify', (req, res) => {
+router.post('/verify', adminRateLimiter, (req, res) => {
   const candidateKey = 
     req.body?.key || 
     req.headers['x-admin-key'] || 
