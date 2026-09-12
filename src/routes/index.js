@@ -6,6 +6,7 @@ import healthRoutes from './health.routes.js';
 import tokenRoutes from './token.routes.js';
 import activityRoutes from './activity.routes.js';
 import webhookRoutes from './webhook.routes.js';
+import adminRoutes from './admin.routes.js';
 import { messageController } from '../controllers/message.controller.js';
 import { validateSendMessage } from '../middlewares/validator.middleware.js';
 import { apiKeyAuth } from '../middlewares/auth.middleware.js';
@@ -13,6 +14,7 @@ import { messageRateLimiter } from '../middlewares/rateLimiter.middleware.js';
 
 const router = Router();
 
+router.use('/admin', adminRoutes);
 router.use('/messages', messageRoutes);
 router.use('/otp', otpRoutes);
 router.use('/instance', instanceRoutes);

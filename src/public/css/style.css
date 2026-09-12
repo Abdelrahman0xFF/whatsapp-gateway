@@ -1604,3 +1604,109 @@ body {
     gap: 10px;
   }
 }
+
+/* ==========================================================================
+   ADMIN SECURITY GATE MODAL
+   ========================================================================== */
+.admin-gate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background-color: rgba(4, 6, 12, 0.88);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 200ms ease-out;
+}
+
+.admin-gate-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-active);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(16, 185, 129, 0.15);
+  width: 100%;
+  max-width: 460px;
+  padding: 32px 28px;
+  text-align: center;
+  position: relative;
+}
+
+.admin-gate-icon-frame {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--primary-subtle);
+  border: 1px solid var(--primary-border);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 18px;
+}
+
+.admin-gate-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.admin-gate-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.admin-gate-input-wrap {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.admin-gate-input-wrap .text-input {
+  width: 100%;
+  padding-right: 40px;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+}
+
+.admin-gate-error {
+  background-color: var(--rose-subtle);
+  border: 1px solid var(--rose-border);
+  color: #fecdd3;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  margin-bottom: 14px;
+  text-align: left;
+}
+
+.admin-gate-footer {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.btn-block {
+  width: 100%;
+  justify-content: center;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+}
+
+.badge-locked {
+  background-color: var(--rose-subtle);
+  color: var(--rose);
+  border: 1px solid var(--rose-border);
+}
+
+.badge-unlocked {
+  background-color: var(--primary-subtle);
+  color: var(--primary);
+  border: 1px solid var(--primary-border);
+}

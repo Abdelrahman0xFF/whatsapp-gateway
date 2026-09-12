@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import { tokenController } from '../controllers/token.controller.js';
+import { adminAuth } from '../middlewares/auth.middleware.js';
 
 const router = Router();
+
+router.use(adminAuth);
 
 router.get('/', (req, res, next) => {
   tokenController.listTokens(req, res, next);

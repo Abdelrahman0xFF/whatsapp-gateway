@@ -2,6 +2,8 @@ import app from './app.js';
 import { ENV } from './config/env.js';
 import { whatsappService } from './services/whatsapp.service.js';
 
+import { adminService } from './services/admin.service.js';
+
 const server = app.listen(ENV.PORT, ENV.HOST, async () => {
   console.log('\n======================================================');
   console.log('🚀 WhatsApp REST API Gateway is running!');
@@ -13,7 +15,7 @@ const server = app.listen(ENV.PORT, ENV.HOST, async () => {
   } else {
     console.log(`🔗 Remote Evolution API: ${ENV.EVOLUTION_API_URL}`);
   }
-  console.log(`🔐 API Key Auth: ${ENV.GATEWAY_API_KEY ? 'ENABLED' : 'DISABLED'}`);
+  adminService.printStartupBanner();
   console.log('======================================================\n');
 
   try {

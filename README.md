@@ -103,8 +103,8 @@ The repository includes a [`render.yaml`](render.yaml) blueprint ready for 1-cli
    git remote add space https://huggingface.co/spaces/YOUR_USERNAME/YOUR_SPACE_NAME
    git push -u space main
    ```
-3. In Space **Settings** &rarr; **Variables and secrets**, add `GATEWAY_API_KEY`.
-4. Open your Space URL and link WhatsApp.
+3. In Space **Settings** &rarr; **Variables and secrets**, add `ADMIN_API_KEY` (e.g. `adm_live_production_secret_key`).
+4. Open your Space URL and enter your `ADMIN_API_KEY` to unlock the Developer Cockpit and link WhatsApp.
 
 ---
 
@@ -114,37 +114,41 @@ The repository includes a [`render.yaml`](render.yaml) blueprint ready for 1-cli
 # Build the production Docker image
 docker build -t whatsapp-gateway .
 
-# Run container with persistent session volume
+# Run container with persistent session volume and Admin Key
 docker run -d \
   --name whatsapp-gateway \
   -p 7860:7860 \
   -v $(pwd)/data/auth_info:/app/data/auth_info \
-  -e GATEWAY_API_KEY="wa_my_secret_production_key" \
+  -v $(pwd)/data:/app/data \
+  -e ADMIN_API_KEY="wa_admin_my_secret_production_key" \
   whatsapp-gateway
 ```
 
 ---
 
-## 🔐 Authentication & API Key Governance
+## 🔐 Authentication & Zero-Trust Security
 
-### Passing Authentication in Requests
+The gateway implements a **Dual-Tier Role-Based Security Architecture**:
 
-The gateway validates client requests using timing-safe SHA-256 comparison. Provide your token via any of these methods:
+### 1. Master Admin Role (`ADMIN_API_KEY`)
+The Master Admin Key is configured via `ADMIN_API_KEY` in your environment or secrets.
+- **Grants Access To**: Developer Cockpit Web UI, Token Generation, Token Revocation, WhatsApp QR & Pairing Code, Instance Controls, Activity Feeds, and Webhook Configuration.
+- **Pass via Header**:
+  ```http
+  x-admin-key: your_admin_api_key
+  ```
+  _(or `Authorization: Bearer your_admin_api_key`)_
+- **Zero-Exposure Default**: If `ADMIN_API_KEY` is not set on startup, the gateway generates a persistent random key (`adm_live_...`), saves it to `data/.admin_secret`, and logs it to container logs. Public unauthenticated access to token management is **never** permitted.
 
-1. **`x-api-key` header** _(Recommended)_:
-   ```http
-   x-api-key: wa_live_...
-   ```
-2. **Bearer Token header**:
-   ```http
-   Authorization: Bearer wa_live_...
-   ```
-3. **Query Parameter**:
-   ```text
-   ?api_key=wa_live_...
-   ```
-
-_(If no tokens exist and `GATEWAY_API_KEY` is not set in `.env`, the gateway operates in open development mode)._
+### 2. Client API Role (`wa_live_...`)
+Client tokens are generated inside the Developer Cockpit Token Studio for downstream microservices, backends, or CRMs.
+- **Grants Access To**: Messaging dispatches (`/api/messages/*`) and OTP operations (`/api/otp/*`).
+- **Strictly Prohibited From**: Generating or deleting tokens, viewing QR codes or pairing codes, or reading activity feeds.
+- **Pass via Header**:
+  ```http
+  x-api-key: wa_live_...
+  ```
+  _(or `Authorization: Bearer wa_live_...`)_
 
 ---
 
@@ -469,15 +473,35 @@ The repository includes a ready-to-import Postman Collection:
 | `NODE_ENV`             | `development`                | Runtime environment (`development`, `production`, `test`)          |
 | `WHATSAPP_ENGINE`      | `baileys`                    | Engine mode: `baileys` (embedded) or `evolution` (remote)          |
 | `SESSION_DATA_PATH`    | `./data/auth_info`           | Directory where WhatsApp session credentials persist               |
-| `GATEWAY_API_KEY`      | _(empty)_                    | Optional default API key. Supports comma-separated keys            |
+| `ADMIN_API_KEY`        | _(auto-generated)_           | Master Admin Key for Web Cockpit, key management, QR code, and logs|
+| `GATEWAY_API_KEY`      | _(empty)_                    | Optional client default/fallback API key (comma-separated)         |
 | `RATE_LIMIT_MAX`       | `60`                         | Max requests per rate limit window per IP                          |
 | `RATE_LIMIT_WINDOW_MS` | `60000`                      | Rate limit window duration in milliseconds (default 1 min)         |
+| `WHITELIST_PHONE_NUMBER`| `201012345678`              | Whitelist phone number used in tests and shown as UI placeholder   |
 | `RECIPIENT_NUMBER`     | _(empty)_                    | Optional default recipient phone number for testing                |
 | `WEBHOOK_URL`          | _(empty)_                    | Outbound webhook URL for incoming messages and delivery receipts   |
 | `WEBHOOK_SECRET`       | _(empty)_                    | Secret key used to sign outbound webhook payloads with HMAC-SHA256 |
 | `EVOLUTION_API_URL`    | `http://localhost:8080`      | URL of remote Evolution API instance (if using Evolution engine)   |
 | `EVOLUTION_API_KEY`    | `my-super-secret-key-123456` | API key for remote Evolution API (if using Evolution engine)       |
 | `INSTANCE_NAME`        | `test-bot`                   | Instance identifier (if using Evolution engine)                    |
+
+### 📱 Whitelist Phone Number (`WHITELIST_PHONE_NUMBER`)
+
+The gateway supports configuring a dedicated test and display phone number via the environment:
+
+```ini
+# Add your verified phone number (digits only with country code):
+WHITELIST_PHONE_NUMBER=201012345678
+```
+
+- **Environment Fallbacks**: The gateway checks `WHITELIST_PHONE_NUMBER`, `WHITELIST_NUMBER`, and `RECIPIENT_NUMBER`. If none is specified, it defaults safely to `201012345678`.
+- **Dynamic App Placeholders**: The backend automatically serves this number in `GET /api/health` and `GET /api/instance/status`. The Developer Cockpit client app dynamically injects it as the placeholder across:
+  - Text Message Recipient input (`#text-msg-phone`)
+  - Media Message Recipient input (`#media-msg-phone`)
+  - OTP Recipient input (`#otp-recipient-phone`)
+  - WhatsApp Pairing Code phone input (`#input-pairing-phone`)
+  - Interactive code snippets (cURL, Python, Node.js, C#).
+- **Automated Test Integration**: The test runner uses this number for all test requests and validations instead of hardcoded numbers.
 
 ---
 
@@ -490,6 +514,20 @@ npm test
 ```
 
 The test suite validates health checks, UI static assets, token lifecycle, auth middlewares, input validation, messaging endpoints, OTP flows, webhooks, instance management, and paginated activity feed operations.
+
+### Running Tests with a Custom Whitelist Recipient
+
+You can test with any specific phone number by providing `WHITELIST_PHONE_NUMBER`:
+
+```bash
+# Windows PowerShell
+$env:WHITELIST_PHONE_NUMBER="201099887766"; npm test
+
+# Linux / macOS / Docker
+WHITELIST_PHONE_NUMBER=201099887766 npm test
+```
+
+The test runner will confirm that `/api/health` and `/api/instance/status` dynamically reflect this whitelist number and will validate all messaging and pairing code flows with it.
 
 ---
 

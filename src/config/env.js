@@ -19,6 +19,7 @@ export const ENV = {
   EVOLUTION_API_KEY:
     process.env.EVOLUTION_API_KEY || "my-super-secret-key-123456",
   INSTANCE_NAME: process.env.INSTANCE_NAME || "test-bot",
+  ADMIN_API_KEY: process.env.ADMIN_API_KEY || process.env.MASTER_API_KEY || "",
   GATEWAY_API_KEY: process.env.GATEWAY_API_KEY || process.env.API_KEY || "",
   RATE_LIMIT_MAX: parseInt(process.env.RATE_LIMIT_MAX || "60", 10),
   RATE_LIMIT_WINDOW_MS: parseInt(
@@ -26,6 +27,12 @@ export const ENV = {
     10,
   ),
   DEFAULT_RECIPIENT: process.env.RECIPIENT_NUMBER || "",
+  WHITELIST_PHONE_NUMBER: (
+    process.env.WHITELIST_PHONE_NUMBER ||
+    process.env.WHITELIST_NUMBER ||
+    process.env.RECIPIENT_NUMBER ||
+    "200000000000"
+  ).replace(/\D/g, ""),
   WEBHOOK_URL: process.env.WEBHOOK_URL || "",
   WEBHOOK_SECRET: process.env.WEBHOOK_SECRET || "",
 };

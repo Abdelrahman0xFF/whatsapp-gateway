@@ -7,5 +7,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: ADMIN_API_KEY
+        generateValue: true
       - key: GATEWAY_API_KEY
         generateValue: true

@@ -27,8 +27,9 @@ Unlike heavy WhatsApp enterprise solutions that require separate databases (Post
 ## Capabilities and Constraints
 
 ### Capabilities
-- **Connection & Session Management**: Baileys-based embedded engine with QR scan, phone-number pairing code, connection heartbeat watchdog, and session logout/reconnect.
+- **Zero-Trust Master Admin Security**: Dual-tier privilege architecture where Master Admin Key (`ADMIN_API_KEY`) protects session pairing (QR and 8-digit codes), token governance, activity audit logs, and webhooks; glassmorphic UI Security Gate modal prevents unauthorized dashboard access.
 - **Token & Key Lifecycle Management**: Built-in cryptographic API key generation (`wa_live_...`), metadata labeling, revoking, persistent local key storage, timing-safe auth verification, and `.env` fallback.
+- **Whitelist Recipient & Dynamic UI Placeholders**: Configurable test and display recipient (`WHITELIST_PHONE_NUMBER`) powering automated integration test suites and dynamically populating Cockpit form placeholders and code examples.
 - **Messaging**: Single message dispatch, bulk message queues, media messages (images, documents, audio), delivery status feedback.
 - **OTP Engine**: Cryptographically random 6-digit passcodes, in-memory expiration tracking, rate-limiting per phone number, configurable expiry windows, and verification.
 - **Webhooks**: Outbound event delivery for incoming messages and delivery receipts.

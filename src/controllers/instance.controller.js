@@ -1,4 +1,5 @@
 import { whatsappService } from '../services/whatsapp.service.js';
+import { ENV } from '../config/env.js';
 
 class InstanceController {
   async getStatus(req, res, next) {
@@ -6,6 +7,7 @@ class InstanceController {
       const status = await whatsappService.checkConnection();
       return res.status(200).json({
         success: true,
+        whitelistPhone: ENV.WHITELIST_PHONE_NUMBER,
         ...status
       });
     } catch (error) {

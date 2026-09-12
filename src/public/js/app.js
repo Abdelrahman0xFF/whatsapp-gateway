@@ -7,10 +7,13 @@
 // Application State
 const STATE = {
   isConnected: false,
+  adminKey: sessionStorage.getItem('wa_admin_key') || '',
+  isAdminAuthenticated: false,
   activeLang: 'curl',
   activeMode: 'text',
   activeConsoleTab: 'response', // 'response' | 'snippets'
   pairingTab: 'qr',
+  whitelistPhone: '201012345678',
   clientApiKey: '',
   pollTimer: null,
   tokens: [],
@@ -46,6 +49,18 @@ const DOM = {
   cardTokens: document.getElementById('card-tokens'),
   cardActivity: document.getElementById('card-activity'),
   btnRefreshStatus: document.getElementById('btn-refresh-status'),
+  btnAdminLock: document.getElementById('btn-admin-lock'),
+  adminSessionText: document.getElementById('admin-session-text'),
+  adminSessionBadge: document.getElementById('admin-session-badge'),
+
+  // Admin Security Gate Modal
+  adminGateOverlay: document.getElementById('admin-gate-overlay'),
+  formAdminLogin: document.getElementById('form-admin-login'),
+  inputAdminKey: document.getElementById('input-admin-key'),
+  btnToggleAdminKeyVis: document.getElementById('btn-toggle-admin-key-vis'),
+  adminEyeIcon: document.getElementById('admin-eye-icon'),
+  adminGateError: document.getElementById('admin-gate-error'),
+  btnAdminUnlock: document.getElementById('btn-admin-unlock'),
 
   // Auth Context
   clientApiKeyInput: document.getElementById('client-api-key'),
@@ -188,16 +203,31 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+function updatePhonePlaceholders(phone) {
+  if (!phone) return;
+  STATE.whitelistPhone = phone;
+  if (DOM.textMsgPhone) DOM.textMsgPhone.placeholder = `e.g. ${phone} (country code + digits)`;
+  if (DOM.mediaMsgPhone) DOM.mediaMsgPhone.placeholder = `e.g. ${phone}`;
+  if (DOM.otpRecipientPhone) DOM.otpRecipientPhone.placeholder = `e.g. ${phone}`;
+  if (DOM.inputPairingPhone) DOM.inputPairingPhone.placeholder = `e.g. ${phone} or 15551234567`;
+  updateSnippets();
+}
+
 /* ==========================================================================
    TELEMETRY & CONNECTION MONITORING
    ========================================================================== */
 async function checkStatus() {
   try {
-    const res = await fetch('/api/instance/status');
+    const res = await fetch('/api/instance/status', { headers: getAdminHeaders() });
     const data = await res.json();
 
     const healthRes = await fetch('/api/health');
     const healthData = await healthRes.json().catch(() => ({}));
+
+    const whitelistPhone = data.whitelistPhone || healthData.whitelistPhone;
+    if (whitelistPhone) {
+      updatePhonePlaceholders(whitelistPhone);
+    }
 
     if (healthData.uptime) {
       DOM.uptimeBadge.innerText = healthData.uptime;
@@ -268,7 +298,7 @@ function switchPairingTab(tab) {
 
 async function loadQrCode(force = false) {
   try {
-    const res = await fetch('/api/instance/qr');
+    const res = await fetch('/api/instance/qr', { headers: getAdminHeaders() });
     const data = await res.json();
 
     if (data.qr) {
@@ -299,7 +329,7 @@ async function handleRequestPairingCode() {
   try {
     const res = await fetch('/api/instance/pairing-code', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAdminHeaders(),
       body: JSON.stringify({ number: phone })
     });
 
@@ -324,7 +354,7 @@ async function handleLogoutDevice() {
   DOM.btnConfirmUnlink.innerText = 'Unlinking...';
 
   try {
-    const headers = getAuthHeaders();
+    const headers = getAdminHeaders();
     const res = await fetch('/api/instance/logout', { method: 'POST', headers });
     const data = await res.json();
 
@@ -348,7 +378,7 @@ async function handleLogoutDevice() {
    ========================================================================== */
 async function loadTokens() {
   try {
-    const res = await fetch('/api/tokens');
+    const res = await fetch('/api/tokens', { headers: getAdminHeaders() });
     const data = await res.json();
 
     if (data.success && Array.isArray(data.data)) {
@@ -431,7 +461,7 @@ function cancelRevokeToken() {
 async function executeRevokeToken(id) {
   STATE.pendingRevokeId = null;
   try {
-    const res = await fetch(`/api/tokens/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/tokens/${id}`, { method: 'DELETE', headers: getAdminHeaders() });
     const data = await res.json();
 
     if (data.success) {
@@ -462,7 +492,7 @@ async function handleGenerateToken() {
   try {
     const res = await fetch('/api/tokens/generate', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAdminHeaders(),
       body: JSON.stringify({ name })
     });
 
@@ -507,13 +537,137 @@ function clearSessionKey() {
   showToast('Reverted session to open mode.', 'info');
 }
 
+function getAdminHeaders() {
+  const headers = { 'Content-Type': 'application/json' };
+  const key = STATE.adminKey || sessionStorage.getItem('wa_admin_key') || '';
+  if (key) {
+    headers['x-admin-key'] = key;
+  }
+  return headers;
+}
+
 function getAuthHeaders() {
   const headers = { 'Content-Type': 'application/json' };
-  const key = DOM.clientApiKeyInput.value.trim();
+  const clientKey = DOM.clientApiKeyInput?.value?.trim();
+  const adminKey = STATE.adminKey || sessionStorage.getItem('wa_admin_key') || '';
+  const key = clientKey || adminKey;
   if (key) {
     headers['x-api-key'] = key;
   }
   return headers;
+}
+
+/* ==========================================================================
+   ADMIN SECURITY GATE & SESSION GOVERNANCE
+   ========================================================================== */
+async function initAdminAuth() {
+  const storedKey = sessionStorage.getItem('wa_admin_key');
+  if (storedKey) {
+    STATE.adminKey = storedKey;
+    const ok = await verifyAdminKey(storedKey, true);
+    if (ok) {
+      unlockCockpit();
+      return;
+    }
+  }
+  lockCockpit();
+}
+
+async function verifyAdminKey(key, silent = false) {
+  try {
+    const res = await fetch('/api/admin/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key })
+    });
+    const data = await res.json().catch(() => ({}));
+    return res.ok && data.success;
+  } catch (err) {
+    if (!silent) console.error('Admin verification error:', err);
+    return false;
+  }
+}
+
+async function handleAdminUnlock() {
+  if (!DOM.inputAdminKey) return;
+  const key = DOM.inputAdminKey.value.trim();
+  if (!key) {
+    DOM.inputAdminKey.focus();
+    return;
+  }
+
+  if (DOM.btnAdminUnlock) DOM.btnAdminUnlock.disabled = true;
+  if (DOM.adminGateError) DOM.adminGateError.style.display = 'none';
+
+  try {
+    const ok = await verifyAdminKey(key);
+    if (ok) {
+      STATE.adminKey = key;
+      sessionStorage.setItem('wa_admin_key', key);
+      unlockCockpit();
+      showToast('Admin session verified successfully!', 'success');
+    } else {
+      if (DOM.adminGateError) {
+        DOM.adminGateError.innerText = 'Invalid Master Admin Key. Please check your credentials.';
+        DOM.adminGateError.style.display = 'block';
+      }
+    }
+  } finally {
+    if (DOM.btnAdminUnlock) DOM.btnAdminUnlock.disabled = false;
+  }
+}
+
+function unlockCockpit() {
+  STATE.isAdminAuthenticated = true;
+  if (DOM.adminGateOverlay) DOM.adminGateOverlay.style.display = 'none';
+  if (DOM.adminSessionBadge) {
+    DOM.adminSessionBadge.className = 'badge-count badge-unlocked';
+    DOM.adminSessionBadge.innerText = 'Unlocked';
+  }
+  if (DOM.btnAdminLock) DOM.btnAdminLock.title = 'Admin session active — Click to lock cockpit';
+
+  // Load telemetry and resources
+  checkStatus();
+  loadTokens();
+  loadActivity();
+  startActivityPolling();
+}
+
+function lockCockpit() {
+  STATE.isAdminAuthenticated = false;
+  STATE.adminKey = '';
+  sessionStorage.removeItem('wa_admin_key');
+
+  if (STATE.pollTimer) clearTimeout(STATE.pollTimer);
+  if (STATE.activity.pollTimer) clearInterval(STATE.activity.pollTimer);
+
+  if (DOM.adminSessionBadge) {
+    DOM.adminSessionBadge.className = 'badge-count badge-locked';
+    DOM.adminSessionBadge.innerText = 'Locked';
+  }
+  if (DOM.btnAdminLock) DOM.btnAdminLock.title = 'Cockpit is locked — Click to unlock';
+  if (DOM.adminGateOverlay) DOM.adminGateOverlay.style.display = 'flex';
+  if (DOM.inputAdminKey) {
+    DOM.inputAdminKey.value = '';
+    DOM.inputAdminKey.focus();
+  }
+  if (DOM.adminGateError) DOM.adminGateError.style.display = 'none';
+}
+
+function toggleAdminLock() {
+  if (STATE.isAdminAuthenticated) {
+    lockCockpit();
+    showToast('Admin session locked.', 'info');
+  } else {
+    if (DOM.adminGateOverlay) DOM.adminGateOverlay.style.display = 'flex';
+    if (DOM.inputAdminKey) DOM.inputAdminKey.focus();
+  }
+}
+
+function toggleAdminKeyVisibility() {
+  if (!DOM.inputAdminKey) return;
+  const isPass = DOM.inputAdminKey.type === 'password';
+  DOM.inputAdminKey.type = isPass ? 'text' : 'password';
 }
 
 /* ==========================================================================
@@ -792,18 +946,19 @@ function updateSnippets() {
   const origin = window.location.origin;
   const apiKey = DOM.clientApiKeyInput.value.trim() || 'YOUR_API_KEY';
   const mode = STATE.activeMode;
+  const defaultPhone = STATE.whitelistPhone || '201012345678';
   let code = '';
 
   let endpoint = '/api/messages/send';
   let payloadObj = {
-    number: DOM.textMsgPhone.value.trim() || '201012345678',
+    number: DOM.textMsgPhone.value.trim() || defaultPhone,
     message: DOM.textMsgBody.value.trim() || 'Hello from WhatsApp REST Gateway!'
   };
 
   if (mode === 'media') {
     endpoint = '/api/messages/send-media';
     payloadObj = {
-      number: DOM.mediaMsgPhone.value.trim() || '201012345678',
+      number: DOM.mediaMsgPhone.value.trim() || defaultPhone,
       type: DOM.mediaMsgType.value || 'image',
       mediaUrl: DOM.mediaMsgUrl.value.trim() || 'https://example.com/sample.jpg',
       caption: DOM.mediaMsgCaption.value.trim() || 'Monthly Statement'
@@ -811,7 +966,7 @@ function updateSnippets() {
   } else if (mode === 'otp') {
     endpoint = '/api/otp/send';
     payloadObj = {
-      number: DOM.otpRecipientPhone.value.trim() || '201012345678',
+      number: DOM.otpRecipientPhone.value.trim() || defaultPhone,
       appName: DOM.otpAppTitle.value.trim() || 'My SaaS'
     };
   }
@@ -893,7 +1048,7 @@ async function loadActivity() {
   if (search && search.trim()) params.append('search', search.trim());
 
   try {
-    const res = await fetch(`/api/activity?${params.toString()}`);
+    const res = await fetch(`/api/activity?${params.toString()}`, { headers: getAdminHeaders() });
     const data = await res.json();
 
     if (data.success) {
@@ -1033,7 +1188,7 @@ function resetActivityFilters() {
 
 async function handleDeleteActivity(id) {
   try {
-    const res = await fetch(`/api/activity/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/activity/${id}`, { method: 'DELETE', headers: getAdminHeaders() });
     const data = await res.json();
     if (data.success) {
       showToast('Activity record removed.', 'info');
@@ -1049,7 +1204,7 @@ async function handleClearActivity() {
   DOM.btnConfirmClearActivity.innerText = 'Clearing...';
 
   try {
-    await fetch('/api/activity/clear', { method: 'DELETE' });
+    await fetch('/api/activity/clear', { method: 'DELETE', headers: getAdminHeaders() });
     showToast('Activity feed cleared.', 'info');
     DOM.clearConfirmDrawer.style.display = 'none';
     STATE.activity.page = 1;
@@ -1244,6 +1399,16 @@ function initEventListeners() {
   DOM.btnPrevPage.addEventListener('click', () => goToActivityPage(STATE.activity.page - 1));
   DOM.btnNextPage.addEventListener('click', () => goToActivityPage(STATE.activity.page + 1));
   DOM.btnLastPage.addEventListener('click', () => goToActivityPage(STATE.activity.totalPages));
+
+  // Admin Security Gate & Session Controls
+  if (DOM.btnAdminLock) DOM.btnAdminLock.addEventListener('click', toggleAdminLock);
+  if (DOM.btnToggleAdminKeyVis) DOM.btnToggleAdminKeyVis.addEventListener('click', toggleAdminKeyVisibility);
+  if (DOM.formAdminLogin) {
+    DOM.formAdminLogin.addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleAdminUnlock();
+    });
+  }
 }
 
 // Global scope bindings for inline HTML handlers
@@ -1255,12 +1420,12 @@ window.useTokenInSession = useTokenInSession;
 window.goToActivityPage = goToActivityPage;
 window.resetActivityFilters = resetActivityFilters;
 window.handleDeleteActivity = handleDeleteActivity;
+window.handleAdminUnlock = handleAdminUnlock;
+window.toggleAdminLock = toggleAdminLock;
+window.toggleAdminKeyVisibility = toggleAdminKeyVisibility;
 
 // Bootstrap Application
 initEventListeners();
 updateAuthModeStatus();
-checkStatus();
-loadTokens();
-loadActivity();
 updateSnippets();
-startActivityPolling();
+initAdminAuth();
