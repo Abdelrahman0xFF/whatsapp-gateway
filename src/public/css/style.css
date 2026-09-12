@@ -389,22 +389,27 @@ body {
 
 .btn-input-icon {
   position: absolute;
-  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 10px;
   background: transparent;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 4px;
+  padding: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
+  z-index: 2;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 .btn-input-icon:hover {
   color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
 }
 #btn-clear-session-key {
-  right: 32px;
+  right: 38px;
 }
 
 /* ==========================================================================
@@ -1662,12 +1667,15 @@ body {
 
 .admin-gate-input-wrap {
   position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
   margin-bottom: 14px;
 }
 
 .admin-gate-input-wrap .text-input {
   width: 100%;
-  padding-right: 40px;
+  padding-right: 42px !important;
   font-size: 0.95rem;
   letter-spacing: 0.5px;
 }
