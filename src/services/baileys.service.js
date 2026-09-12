@@ -9,6 +9,8 @@ import pino from 'pino';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ENV } from '../config/env.js';
+import { activityService } from './activity.service.js';
+import { webhookService } from './webhook.service.js';
 
 class BaileysService {
   constructor() {
@@ -20,6 +22,7 @@ class BaileysService {
     this.isReconnecting = false;
     this.pairingCode = null;
     this.logger = pino({ level: 'silent' });
+    this.watchdogStarted = false;
   }
 
   _cleanupCurrentSocket() {
@@ -32,7 +35,25 @@ class BaileysService {
     }
   }
 
+  _startWatchdog() {
+    if (this.watchdogStarted) return;
+    this.watchdogStarted = true;
+
+    setInterval(async () => {
+      if (this.connectionState === 'disconnected' && !this.isReconnecting) {
+        console.log('[WhatsApp Watchdog] Reconnecting disconnected WhatsApp socket...');
+        try {
+          await this.init();
+        } catch (err) {
+          console.error('[WhatsApp Watchdog] Reconnection attempt failed:', err.message);
+        }
+      }
+    }, 45000).unref();
+  }
+
   async init() {
+    this._startWatchdog();
+
     if (this.sock && this.connectionState === 'open') {
       return;
     }
@@ -66,6 +87,16 @@ class BaileysService {
 
       this.sock.ev.on('creds.update', saveCreds);
 
+      // Incoming messages webhook
+      this.sock.ev.on('messages.upsert', async (upsert) => {
+        webhookService.dispatch('messages.upsert', upsert);
+      });
+
+      // Message delivery & read receipts webhook
+      this.sock.ev.on('messages.update', async (updates) => {
+        webhookService.dispatch('messages.update', updates);
+      });
+
       this.sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
@@ -87,6 +118,7 @@ class BaileysService {
 
         if (connection === 'close') {
           this.connectionState = 'disconnected';
+          webhookService.dispatch('connection.update', { connection: 'close', state: 'disconnected' });
 
           const statusCode = lastDisconnect?.error?.output?.statusCode;
           const isLoggedOut = statusCode === DisconnectReason.loggedOut;
@@ -116,6 +148,11 @@ class BaileysService {
           this.qrImageBase64 = null;
           this.pairingCode = null;
           console.log('✅ [WhatsApp Engine] WhatsApp device linked successfully!');
+          webhookService.dispatch('connection.update', {
+            connection: 'open',
+            state: 'open',
+            user: this.sock?.user ? { id: this.sock.user.id, name: this.sock.user.name } : null
+          });
         }
       });
     } catch (err) {
@@ -198,15 +235,27 @@ class BaileysService {
   async sendTextMessage(number, text) {
     if (this.connectionState !== 'open' || !this.sock) {
       throw new Error(
-        'WhatsApp is not connected. Please open http://localhost:7860 to link your WhatsApp account.'
+        'WhatsApp is not connected. Please open the dashboard to link your WhatsApp account.'
       );
     }
 
     const cleanNumber = number.toString().replace(/\D/g, '');
     const jid = `${cleanNumber}@s.whatsapp.net`;
+    const startTime = Date.now();
 
     try {
       const sent = await this.sock.sendMessage(jid, { text });
+      const durationMs = Date.now() - startTime;
+
+      activityService.log({
+        type: 'TEXT',
+        recipient: cleanNumber,
+        status: 'SENT',
+        messageId: sent?.key?.id || null,
+        preview: text,
+        durationMs
+      });
+
       return {
         success: true,
         recipient: cleanNumber,
@@ -215,7 +264,119 @@ class BaileysService {
         timestamp: new Date().toISOString()
       };
     } catch (err) {
+      const durationMs = Date.now() - startTime;
+      activityService.log({
+        type: 'TEXT',
+        recipient: cleanNumber,
+        status: 'FAILED',
+        preview: text,
+        error: err.message,
+        durationMs
+      });
       throw new Error(`Failed to send WhatsApp message: ${err.message}`);
+    }
+  }
+
+  async sendMediaMessage({ number, type = 'image', mediaUrl, mediaBase64, caption, fileName, mimetype, ptt }) {
+    if (this.connectionState !== 'open' || !this.sock) {
+      throw new Error(
+        'WhatsApp is not connected. Please open the dashboard to link your WhatsApp account.'
+      );
+    }
+
+    const cleanNumber = number.toString().replace(/\D/g, '');
+    const jid = `${cleanNumber}@s.whatsapp.net`;
+    const mediaType = (type || 'image').toLowerCase();
+    const startTime = Date.now();
+
+    let buffer;
+    if (mediaBase64) {
+      const cleanBase64 = mediaBase64.replace(/^data:([a-zA-Z0-9/+-]+);base64,/, '');
+      buffer = Buffer.from(cleanBase64, 'base64');
+    } else if (mediaUrl) {
+      try {
+        const response = await fetch(mediaUrl, { signal: AbortSignal.timeout(15000) });
+        if (!response.ok) {
+          throw new Error(`Failed to download media from URL (HTTP ${response.status})`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        buffer = Buffer.from(arrayBuffer);
+        if (!mimetype) {
+          mimetype = response.headers.get('content-type') || undefined;
+        }
+      } catch (e) {
+        throw new Error(`Could not fetch media from URL: ${e.message}`);
+      }
+    } else {
+      throw new Error('Either "mediaUrl" or "mediaBase64" is required to send media.');
+    }
+
+    if (buffer.length > 25 * 1024 * 1024) {
+      throw new Error('Media file exceeds maximum size limit of 25MB.');
+    }
+
+    let payload = {};
+    if (mediaType === 'image') {
+      payload = {
+        image: buffer,
+        caption: caption || undefined,
+        mimetype: mimetype || 'image/jpeg'
+      };
+    } else if (mediaType === 'document') {
+      payload = {
+        document: buffer,
+        caption: caption || undefined,
+        mimetype: mimetype || 'application/pdf',
+        fileName: fileName || 'document.pdf'
+      };
+    } else if (mediaType === 'audio') {
+      payload = {
+        audio: buffer,
+        mimetype: mimetype || 'audio/mp4',
+        ptt: Boolean(ptt)
+      };
+    } else if (mediaType === 'video') {
+      payload = {
+        video: buffer,
+        caption: caption || undefined,
+        mimetype: mimetype || 'video/mp4'
+      };
+    } else {
+      throw new Error(`Unsupported media type "${type}". Allowed: image, document, audio, video.`);
+    }
+
+    try {
+      const sent = await this.sock.sendMessage(jid, payload);
+      const durationMs = Date.now() - startTime;
+
+      activityService.log({
+        type: 'MEDIA',
+        recipient: cleanNumber,
+        status: 'SENT',
+        messageId: sent?.key?.id || null,
+        preview: `${mediaType.toUpperCase()}: ${caption || fileName || 'media attachment'}`,
+        durationMs
+      });
+
+      return {
+        success: true,
+        recipient: cleanNumber,
+        type: mediaType,
+        messageId: sent?.key?.id || null,
+        status: 'SENT',
+        timestamp: new Date().toISOString()
+      };
+    } catch (err) {
+      const durationMs = Date.now() - startTime;
+      activityService.log({
+        type: 'MEDIA',
+        recipient: cleanNumber,
+        status: 'FAILED',
+        preview: `${mediaType.toUpperCase()}: ${caption || fileName || 'media attachment'}`,
+        error: err.message,
+        durationMs
+      });
+      throw new Error(`Failed to send WhatsApp media message: ${err.message}`);
     }
   }
 

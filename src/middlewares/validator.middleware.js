@@ -92,3 +92,55 @@ export function validateVerifyOtp(req, res, next) {
 
   next();
 }
+
+export function validateSendMedia(req, res, next) {
+  const body = req.body || {};
+  const rawNumber = body.number || body.phone || body.to || body.phoneNumber || body.recipient;
+  const mediaUrl = body.mediaUrl || body.url || body.image || body.document || body.audio || body.video;
+  const mediaBase64 = body.mediaBase64 || body.base64;
+
+  if (!rawNumber) {
+    return res.status(400).json({
+      success: false,
+      error: 'Field "number" (or "phone" / "to") is required.'
+    });
+  }
+
+  const cleanNumber = String(rawNumber).replace(/\D/g, '');
+  if (cleanNumber.length < 7 || cleanNumber.length > 15) {
+    return res.status(400).json({
+      success: false,
+      error: `Invalid phone number "${rawNumber}". Must be 7 to 15 digits including country code.`
+    });
+  }
+
+  if (!mediaUrl && !mediaBase64) {
+    return res.status(400).json({
+      success: false,
+      error: 'Either "mediaUrl" or "mediaBase64" must be provided.'
+    });
+  }
+
+  const validTypes = ['image', 'document', 'audio', 'video'];
+  const type = (body.type || 'image').toLowerCase();
+  if (!validTypes.includes(type)) {
+    return res.status(400).json({
+      success: false,
+      error: `Invalid media type "${body.type}". Supported types: ${validTypes.join(', ')}.`
+    });
+  }
+
+  req.validated = {
+    number: cleanNumber,
+    type,
+    mediaUrl: mediaUrl || null,
+    mediaBase64: mediaBase64 || null,
+    caption: body.caption ? String(body.caption).trim() : '',
+    fileName: body.fileName ? String(body.fileName).trim() : '',
+    mimetype: body.mimetype ? String(body.mimetype).trim() : '',
+    ptt: Boolean(body.ptt)
+  };
+
+  next();
+}
+

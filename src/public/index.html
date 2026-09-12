@@ -3,204 +3,528 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WhatsApp REST API Gateway</title>
+  <title>WhatsApp REST API Gateway — Developer Cockpit</title>
+  <meta name="description" content="Production-ready REST API gateway and developer command center for WhatsApp messaging, media dispatch, and OTP verification.">
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="container">
-    <!-- Header -->
-    <header>
-      <div class="brand">
-        <div class="brand-icon">💬</div>
-        <div class="brand-title">
-          <h1>WhatsApp REST Gateway</h1>
-          <p>Universal Messaging & OTP Microservice for All Your Projects</p>
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <div class="cockpit-shell">
+    <!-- Top Global Navigation & Telemetry Header -->
+    <header class="cockpit-header">
+      <div class="header-brand">
+        <div class="brand-glyph" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+          </svg>
+        </div>
+        <div class="brand-meta">
+          <div class="brand-name">
+            <span class="product-title">WhatsApp REST Gateway</span>
+            <span class="version-tag">v2.0 Production</span>
+          </div>
+          <p class="brand-tagline">Microservice & Developer Cockpit</p>
         </div>
       </div>
-      <div class="status-wrapper">
-        <div id="status-badge" class="badge badge-checking">
-          <div class="pulse-dot"></div>
-          <span id="badge-text">Connecting to WhatsApp...</span>
+
+      <!-- Telemetry Strip -->
+      <div class="telemetry-bar">
+        <div class="telemetry-pill">
+          <span class="telemetry-label">Engine:</span>
+          <span id="engine-badge" class="telemetry-value">Baileys (Embedded)</span>
         </div>
+        <div class="telemetry-pill">
+          <span class="telemetry-label">Uptime:</span>
+          <span id="uptime-badge" class="telemetry-value tabular-num">0s</span>
+        </div>
+        <div id="connection-badge" class="connection-status-pill status-checking">
+          <span class="status-beacon"></span>
+          <span id="connection-status-text">Checking WhatsApp...</span>
+        </div>
+        <button id="btn-toggle-tokens" class="btn btn-header-action" type="button">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 2l-2 2m-1-1l-3 3m1 1l-2 2-4-4 2-2 4 4zm-7 7l-5.5 5.5a2.121 2.121 0 0 1-3 0 2.121 2.121 0 0 1 0-3L10 8l4 4z"></path>
+          </svg>
+          <span>API Tokens</span>
+          <span id="header-token-count" class="badge-count">0</span>
+        </button>
       </div>
     </header>
 
-    <!-- Top Info Bar -->
-    <div style="background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 14px 18px; margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between;">
-      <div style="font-size: 13px; color: #9ca3af;">
-        🔑 <b>Security:</b> Protect requests with <code style="color: #38bdf8;">x-api-key</code> or <code style="color: #38bdf8;">Authorization: Bearer</code>
-      </div>
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <label for="api-key-input" style="font-size: 12px; margin: 0; color: #9ca3af;">Client API Key:</label>
-        <input type="password" id="api-key-input" placeholder="Optional if open mode" style="width: 220px; padding: 6px 10px; font-size: 12px;">
-      </div>
-    </div>
-
-    <!-- Main Grid -->
-    <div class="grid">
-      <!-- CARD 1: INSTANCE STATUS, QR CODE & PAIRING CODE -->
-      <div class="card">
-        <div class="card-title">
-          <span>📲</span> WhatsApp Connection
+    <!-- Session Client Key Banner -->
+    <section class="auth-context-bar" aria-label="Client authentication setup">
+      <div class="auth-info-col">
+        <div class="auth-icon-wrap" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
         </div>
-        <div class="card-desc">Link your WhatsApp account via QR code or phone number pairing code.</div>
-
-        <!-- Disconnected view with options -->
-        <div id="qr-section" style="display: none;">
-          <!-- Pairing Mode Tabs -->
-          <div class="tabs" style="margin-bottom: 14px;">
-            <button class="tab-btn active" id="btn-tab-qr" onclick="switchPairingTab('qr')">📷 Scan QR Code</button>
-            <button class="tab-btn" id="btn-tab-code" onclick="switchPairingTab('code')">🔢 Link with Phone Number</button>
-          </div>
-
-          <!-- SUBTAB 1: QR CODE -->
-          <div id="subtab-qr" style="text-align: center;">
-            <ol class="steps">
-              <li>Open <b>WhatsApp</b> on your phone</li>
-              <li>Tap <b>Settings</b> &rarr; <b>Linked Devices</b> &rarr; <b>Link a Device</b></li>
-              <li>Point your camera at this QR code:</li>
-            </ol>
-            <div class="qr-box" style="min-height: 230px; display: flex; align-items: center; justify-content: center;">
-              <img id="qr-image" src="" alt="WhatsApp QR Code" style="display: none;">
-              <span id="qr-loading-text" style="color: #0f172a; font-weight: 600; font-size: 13px;">Generating QR code...</span>
-            </div>
-            <div style="margin-top: 10px; display: flex; justify-content: center; gap: 10px;">
-              <button class="btn btn-secondary btn-sm" onclick="loadQrCode(true)">🔄 Refresh QR</button>
-            </div>
-          </div>
-
-          <!-- SUBTAB 2: PAIRING CODE (PHONE NUMBER) -->
-          <div id="subtab-code" style="display: none;">
-            <p style="font-size: 13px; color: #94a3b8; margin-bottom: 14px;">
-              Cannot scan the QR code? Enter your phone number to receive an 8-character pairing code:
-            </p>
-            <div class="form-group">
-              <label for="pair-phone">Your WhatsApp Phone Number (with Country Code)</label>
-              <input type="tel" id="pair-phone" placeholder="e.g. 201012345678 or 15551234567">
-            </div>
-            <button id="btn-get-pairing-code" class="btn" style="width: 100%; margin-bottom: 14px;" onclick="handleRequestPairingCode()">
-              Generate Pairing Code
-            </button>
-            <div id="pairing-code-display" style="display: none; background: #0f172a; border: 1.5px solid #22c55e; border-radius: 12px; padding: 16px; text-align: center;">
-              <div style="font-size: 12px; color: #94a3b8; margin-bottom: 6px;">Your 8-character Pairing Code:</div>
-              <div id="pairing-code-text" style="font-size: 28px; font-weight: 800; letter-spacing: 4px; color: #4ade80; margin-bottom: 10px;"></div>
-              <ol class="steps" style="margin-bottom: 0;">
-                <li>Open <b>WhatsApp</b> on phone</li>
-                <li>Tap <b>Settings</b> &rarr; <b>Linked Devices</b> &rarr; <b>Link a Device</b></li>
-                <li>Tap <b>"Link with phone number instead"</b> at bottom</li>
-                <li>Type this 8-digit code!</li>
-              </ol>
-            </div>
-          </div>
-        </div>
-
-        <!-- Connected view -->
-        <div id="connected-section" style="display: none; text-align: center; padding: 24px 0;">
-          <div style="font-size: 54px; margin-bottom: 12px;">✅</div>
-          <h2 style="font-size: 18px; color: #4ade80; margin-bottom: 8px;">Device Linked & Active</h2>
-          <p id="connected-user-text" style="font-size: 13px; color: #94a3b8; max-width: 320px; margin: 0 auto 20px;">
-            Your WhatsApp instance is active and connected. All API requests will be dispatched immediately.
-          </p>
-          <div style="display: flex; gap: 10px; justify-content: center;">
-            <button class="btn btn-secondary btn-sm" onclick="checkStatus()">Refresh Status</button>
-            <button class="btn btn-secondary btn-sm" style="background: #451a1a; color: #f87171;" onclick="handleLogout()">Unlink / Logout</button>
-          </div>
+        <div>
+          <div class="auth-headline">Client Request Authentication</div>
+          <div class="auth-subline">Protected by timing-safe SHA-256 validation via <code class="code-inline">x-api-key</code> or <code class="code-inline">Bearer &lt;token&gt;</code>.</div>
         </div>
       </div>
-
-      <!-- CARD 2: SEND MESSAGE TESTER (PRIMARY USER REQUIREMENT) -->
-      <div class="card">
-        <div class="card-title">
-          <span>✉️</span> Dispatch Message
-        </div>
-        <div class="card-desc">POST /api/messages/send — Direct WhatsApp text message sender.</div>
-
-        <div class="form-group">
-          <label for="msg-phone">Recipient Phone Number (with Country Code)</label>
-          <input type="tel" id="msg-phone" placeholder="e.g. 201012345678 or 15551234567">
-        </div>
-
-        <div class="form-group">
-          <label for="msg-text">Message Content</label>
-          <textarea id="msg-text" placeholder="Type the WhatsApp message you want to send..."></textarea>
-        </div>
-
-        <button id="btn-send-msg" class="btn" style="width: 100%;">
-          Send WhatsApp Message
-        </button>
-
-        <pre id="msg-response" class="code-box"></pre>
-      </div>
-
-      <!-- CARD 3: OTP VERIFICATION -->
-      <div class="card">
-        <div class="card-title">
-          <span>🔐</span> OTP Verification Flow
-        </div>
-        <div class="card-desc">POST /api/otp/send & POST /api/otp/verify — Secure 6-digit one-time passcodes.</div>
-
-        <div class="form-group">
-          <label for="otp-phone">Recipient Phone Number</label>
-          <input type="tel" id="otp-phone" placeholder="e.g. 201012345678">
-        </div>
-
-        <div class="form-group">
-          <label for="otp-app-name">Application Name</label>
-          <input type="text" id="otp-app-name" value="My Project" placeholder="e.g. E-Commerce Store">
-        </div>
-
-        <button id="btn-request-otp" class="btn" style="width: 100%; margin-bottom: 16px;">
-          Send Verification Code
-        </button>
-
-        <!-- OTP Enter digits (hidden until sent) -->
-        <div id="otp-inputs-container" style="display: none; text-align: center; margin-top: 12px; border-top: 1px solid #27354f; padding-top: 16px;">
-          <label style="margin-bottom: 12px;">Enter 6-digit Code from WhatsApp:</label>
-          <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 16px;">
-            <input type="text" maxlength="1" class="otp-digit" style="width: 44px; height: 50px; text-align: center; font-size: 20px; font-weight: 700;">
-            <input type="text" maxlength="1" class="otp-digit" style="width: 44px; height: 50px; text-align: center; font-size: 20px; font-weight: 700;">
-            <input type="text" maxlength="1" class="otp-digit" style="width: 44px; height: 50px; text-align: center; font-size: 20px; font-weight: 700;">
-            <input type="text" maxlength="1" class="otp-digit" style="width: 44px; height: 50px; text-align: center; font-size: 20px; font-weight: 700;">
-            <input type="text" maxlength="1" class="otp-digit" style="width: 44px; height: 50px; text-align: center; font-size: 20px; font-weight: 700;">
-            <input type="text" maxlength="1" class="otp-digit" style="width: 44px; height: 50px; text-align: center; font-size: 20px; font-weight: 700;">
-          </div>
-          <button id="btn-verify-otp" class="btn btn-secondary" style="width: 100%;">
-            Verify Code
+      <div class="auth-input-group">
+        <label for="client-api-key" class="auth-label">Active Session Key</label>
+        <div class="input-action-wrapper">
+          <input type="password" id="client-api-key" class="mono-input" placeholder="wa_live_... (or leave blank if dev open mode)" autocomplete="off">
+          <button id="btn-toggle-key-visibility" class="btn-input-icon" type="button" title="Toggle visibility">
+            <svg id="eye-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
           </button>
         </div>
+      </div>
+    </section>
 
-        <pre id="otp-response" class="code-box"></pre>
+    <!-- Primary Grid: Left Column (Connection & Tokens) / Right Column (Playground & Activity) -->
+    <main class="cockpit-grid">
+      <!-- LEFT WORKSPACE -->
+      <div class="grid-column">
+        <!-- CARD 1: WHATSAPP INSTANCE & PAIRING -->
+        <section class="cockpit-card" id="card-connection">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="card-icon-frame" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                  <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                </svg>
+              </div>
+              <div>
+                <h2 class="card-heading">WhatsApp Device Link</h2>
+                <p class="card-subheading">Manage active WebSocket session and device authentication.</p>
+              </div>
+            </div>
+            <button id="btn-refresh-status" class="btn btn-ghost btn-sm" type="button" title="Refresh connection state">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+              </svg>
+              <span>Refresh</span>
+            </button>
+          </div>
+
+          <!-- CONNECTED STATE VIEW -->
+          <div id="view-connected" class="connection-view-state" style="display: none;">
+            <div class="connected-hero">
+              <div class="hero-check-ring" aria-hidden="true">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+              </div>
+              <h3 class="hero-status-title">WhatsApp Socket Connected</h3>
+              <p id="connected-phone-display" class="hero-status-desc">Active phone number connected to WhatsApp Web multi-device session.</p>
+            </div>
+
+            <div class="device-spec-table">
+              <div class="spec-row">
+                <span class="spec-label">Instance JID</span>
+                <span id="instance-jid-val" class="spec-value mono-val">—</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label">Session Storage</span>
+                <span class="spec-value mono-val">./data/auth_info</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label">Watchdog Guard</span>
+                <span class="spec-value badge-active">Active (60s check)</span>
+              </div>
+            </div>
+
+            <div class="card-footer-actions">
+              <button id="btn-logout-device" class="btn btn-danger btn-sm" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                <span>Unlink / Disconnect</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- DISCONNECTED STATE VIEW WITH PAIRING MODES -->
+          <div id="view-disconnected" class="connection-view-state">
+            <div class="segmented-control" role="tablist" aria-label="WhatsApp pairing method">
+              <button id="tab-btn-qr" class="segment-btn active" role="tab" aria-selected="true" type="button">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="14" width="7" height="7"></rect>
+                  <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+                <span>Scan QR Code</span>
+              </button>
+              <button id="tab-btn-phone" class="segment-btn" role="tab" aria-selected="false" type="button">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                </svg>
+                <span>Phone Pairing Code</span>
+              </button>
+            </div>
+
+            <!-- TAB 1: QR CODE -->
+            <div id="pane-qr" class="pairing-pane active">
+              <div class="pairing-instructions">
+                <ol class="ordered-steps">
+                  <li>Open <strong>WhatsApp</strong> on your phone.</li>
+                  <li>Tap <strong>Settings</strong> &rarr; <strong>Linked Devices</strong> &rarr; <strong>Link a Device</strong>.</li>
+                  <li>Point your phone camera at the QR code below:</li>
+                </ol>
+              </div>
+
+              <div class="qr-canvas-wrapper">
+                <div class="qr-frame">
+                  <img id="qr-display-image" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'/%3E" alt="WhatsApp Pairing QR Code" style="display: none;">
+                  <div id="qr-skeleton" class="qr-skeleton-state">
+                    <div class="spinner-beacon"></div>
+                    <span id="qr-status-msg">Generating WhatsApp QR code...</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="qr-controls">
+                <button id="btn-force-qr" class="btn btn-secondary btn-sm" type="button">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                  </svg>
+                  <span>Request Fresh QR</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- TAB 2: PHONE NUMBER PAIRING CODE -->
+            <div id="pane-phone" class="pairing-pane" style="display: none;">
+              <div class="pairing-instructions">
+                <p class="guide-text">Link without camera scan. Enter your phone number with country code to generate an 8-digit WhatsApp pairing passcode.</p>
+              </div>
+
+              <div class="form-field">
+                <label for="input-pairing-phone" class="field-label">WhatsApp Phone Number</label>
+                <div class="input-with-hint">
+                  <input type="tel" id="input-pairing-phone" class="text-input" placeholder="e.g. 201012345678 or 15551234567">
+                  <span class="field-hint">Country code + number (digits only, no spaces or plus signs).</span>
+                </div>
+              </div>
+
+              <button id="btn-request-pairing-code" class="btn btn-primary btn-block" type="button">
+                <span>Generate 8-Digit Code</span>
+              </button>
+
+              <div id="pairing-code-result" class="pairing-code-banner" style="display: none;">
+                <span class="banner-sublabel">Your WhatsApp 8-Character Pairing Code</span>
+                <div class="code-copy-row">
+                  <span id="display-pairing-code" class="huge-code-text">----</span>
+                  <button id="btn-copy-pairing-code" class="btn btn-ghost btn-sm" type="button" title="Copy pairing code">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    <span>Copy</span>
+                  </button>
+                </div>
+                <div class="pairing-steps-alert">
+                  <span class="alert-title">How to enter on your phone:</span>
+                  <p>In WhatsApp &rarr; <strong>Linked Devices</strong> &rarr; <strong>Link a Device</strong> &rarr; tap <strong>"Link with phone number instead"</strong> at bottom and type this code.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CARD 2: API TOKEN STUDIO -->
+        <section class="cockpit-card" id="card-tokens">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="card-icon-frame" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 2l-2 2m-1-1l-3 3m1 1l-2 2-4-4 2-2 4 4zm-7 7l-5.5 5.5a2.121 2.121 0 0 1-3 0 2.121 2.121 0 0 1 0-3L10 8l4 4z"></path>
+                </svg>
+              </div>
+              <div>
+                <h2 class="card-heading">API Tokens & Key Governance</h2>
+                <p class="card-subheading">Generate and revoke cryptographically secure bearer keys.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Token Generator Form -->
+          <form id="form-create-token" class="token-create-strip" onsubmit="event.preventDefault(); handleGenerateToken();">
+            <input type="text" id="token-label-input" class="text-input" placeholder="Token name (e.g. CRM Service, Mobile Backend)" required>
+            <button id="btn-submit-create-token" class="btn btn-primary btn-sm" type="submit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Generate Key</span>
+            </button>
+          </form>
+
+          <!-- Newly Created Token Modal/Notice -->
+          <div id="new-token-alert" class="new-token-callout" style="display: none;">
+            <div class="callout-header">
+              <span class="callout-badge">New API Key Created</span>
+              <span class="callout-warning">Copy now; secret is not shown again.</span>
+            </div>
+            <div class="token-display-box">
+              <code id="new-token-val" class="token-code-text">wa_live_...</code>
+              <div class="token-action-buttons">
+                <button id="btn-copy-new-token" class="btn btn-secondary btn-xs" type="button">Copy Key</button>
+                <button id="btn-use-new-token" class="btn btn-accent btn-xs" type="button">Use in Session</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tokens List Table -->
+          <div class="table-container">
+            <table class="tokens-table" aria-label="List of active API tokens">
+              <thead>
+                <tr>
+                  <th scope="col">Name</th>
+                  <th scope="col">Masked Key</th>
+                  <th scope="col">Created</th>
+                  <th scope="col" class="text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="tokens-table-body">
+                <tr>
+                  <td colspan="4" class="table-empty-row">Loading active tokens...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
 
-      <!-- CARD 4: API DOCUMENTATION & INTEGRATION SNIPPETS -->
-      <div class="card">
-        <div class="card-title">
-          <span>⚡</span> Integration Snippets
-        </div>
-        <div class="card-desc">Call this service from any project (Python, Node, cURL, etc.)</div>
+      <!-- RIGHT WORKSPACE: TESTING STUDIO & ACTIVITY -->
+      <div class="grid-column">
+        <!-- CARD 3: INTERACTIVE API TESTING STUDIO -->
+        <section class="cockpit-card" id="card-playground">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="card-icon-frame" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+              </div>
+              <div>
+                <h2 class="card-heading">API Testing Studio</h2>
+                <p class="card-subheading">Execute live requests and generate multi-language client snippets.</p>
+              </div>
+            </div>
+          </div>
 
-        <div class="tabs">
-          <button class="tab-btn active" data-tab="tab-curl">cURL</button>
-          <button class="tab-btn" data-tab="tab-python">Python</button>
-          <button class="tab-btn" data-tab="tab-js">Node.js</button>
-        </div>
+          <!-- Operational Subtabs: Text, Media, OTP -->
+          <div class="segmented-control" role="tablist" aria-label="API dispatch mode">
+            <button id="tab-mode-text" class="segment-btn active" role="tab" aria-selected="true" type="button">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <span>Text Message</span>
+            </button>
+            <button id="tab-mode-media" class="segment-btn" role="tab" aria-selected="false" type="button">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              <span>Media Attachment</span>
+            </button>
+            <button id="tab-mode-otp" class="segment-btn" role="tab" aria-selected="false" type="button">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <span>OTP Flow</span>
+            </button>
+          </div>
 
-        <div id="tab-curl" class="tab-content active code-wrapper">
-          <button class="copy-btn" onclick="copyToClipboard('snippet-curl', this)">Copy</button>
-          <pre id="snippet-curl" class="code-box" style="display: block; max-height: 230px;"></pre>
-        </div>
+          <!-- FORM 1: SEND TEXT MESSAGE -->
+          <div id="pane-send-text" class="playground-pane active">
+            <div class="form-field">
+              <label for="text-msg-phone" class="field-label">Recipient Phone Number</label>
+              <input type="tel" id="text-msg-phone" class="text-input" placeholder="e.g. 201012345678 (country code + digits)">
+            </div>
+            <div class="form-field">
+              <label for="text-msg-body" class="field-label">Message Content</label>
+              <textarea id="text-msg-body" class="textarea-input" rows="3" placeholder="Type WhatsApp message here..."></textarea>
+            </div>
+            <button id="btn-submit-text" class="btn btn-primary btn-block" type="button">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+              <span>Dispatch Text Message</span>
+            </button>
+          </div>
 
-        <div id="tab-python" class="tab-content code-wrapper">
-          <button class="copy-btn" onclick="copyToClipboard('snippet-python', this)">Copy</button>
-          <pre id="snippet-python" class="code-box" style="display: block; max-height: 230px;"></pre>
-        </div>
+          <!-- FORM 2: SEND MEDIA MESSAGE -->
+          <div id="pane-send-media" class="playground-pane" style="display: none;">
+            <div class="form-grid-2col">
+              <div class="form-field">
+                <label for="media-msg-phone" class="field-label">Recipient Phone Number</label>
+                <input type="tel" id="media-msg-phone" class="text-input" placeholder="e.g. 201012345678">
+              </div>
+              <div class="form-field">
+                <label for="media-msg-type" class="field-label">Attachment Type</label>
+                <select id="media-msg-type" class="select-input">
+                  <option value="image" selected>Image (JPEG, PNG, WebP)</option>
+                  <option value="document">Document / PDF</option>
+                  <option value="audio">Audio Voice Note</option>
+                  <option value="video">Video (MP4)</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-field">
+              <label for="media-msg-url" class="field-label">Media File URL</label>
+              <input type="url" id="media-msg-url" class="text-input mono-input" placeholder="https://example.com/invoice.pdf or image URL">
+            </div>
+            <div class="form-field" id="field-media-caption">
+              <label for="media-msg-caption" class="field-label">Caption or Document Name</label>
+              <input type="text" id="media-msg-caption" class="text-input" placeholder="e.g. Your monthly invoice or photo caption">
+            </div>
+            <button id="btn-submit-media" class="btn btn-primary btn-block" type="button">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+              </svg>
+              <span>Dispatch Media Attachment</span>
+            </button>
+          </div>
 
-        <div id="tab-js" class="tab-content code-wrapper">
-          <button class="copy-btn" onclick="copyToClipboard('snippet-js', this)">Copy</button>
-          <pre id="snippet-js" class="code-box" style="display: block; max-height: 230px;"></pre>
-        </div>
+          <!-- FORM 3: OTP VERIFICATION FLOW -->
+          <div id="pane-send-otp" class="playground-pane" style="display: none;">
+            <div class="form-grid-2col">
+              <div class="form-field">
+                <label for="otp-recipient-phone" class="field-label">Recipient Phone Number</label>
+                <input type="tel" id="otp-recipient-phone" class="text-input" placeholder="e.g. 201012345678">
+              </div>
+              <div class="form-field">
+                <label for="otp-app-title" class="field-label">Application Name</label>
+                <input type="text" id="otp-app-title" class="text-input" value="My Project" placeholder="e.g. SaaS Portal">
+              </div>
+            </div>
+            <button id="btn-submit-otp" class="btn btn-primary btn-block" type="button">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <span>Send One-Time Passcode</span>
+            </button>
+
+            <!-- OTP DIGITS ENTRY (REVEALED AFTER SEND) -->
+            <div id="otp-verify-stage" class="otp-verify-block" style="display: none;">
+              <span class="verify-instruction">Type the 6-digit passcode received on WhatsApp:</span>
+              <div class="otp-pin-grid">
+                <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code">
+                <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]*">
+                <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]*">
+                <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]*">
+                <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]*">
+                <input type="text" maxlength="1" class="pin-digit" inputmode="numeric" pattern="[0-9]*">
+              </div>
+              <button id="btn-submit-verify-otp" class="btn btn-accent btn-block" type="button">
+                <span>Verify Passcode</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- RESPONSE INSPECTOR -->
+          <div class="inspector-section">
+            <div class="inspector-top-bar">
+              <span class="inspector-title">API Response Inspector</span>
+              <div class="inspector-meta-group">
+                <span id="response-status-badge" class="response-status-pill" style="display: none;">200 OK</span>
+                <span id="response-latency-badge" class="response-latency-pill tabular-num" style="display: none;">0ms</span>
+                <button id="btn-copy-response" class="btn btn-ghost btn-xs" type="button">Copy JSON</button>
+              </div>
+            </div>
+            <pre id="response-output-box" class="code-terminal" tabindex="0">Waiting for API dispatch...</pre>
+          </div>
+
+          <!-- LIVE MULTI-LANGUAGE CODE SNIPPETS -->
+          <div class="snippets-section">
+            <div class="snippets-header">
+              <span class="snippets-title">Client Integration Snippets</span>
+              <div class="snippet-lang-tabs" role="tablist">
+                <button class="lang-tab active" data-lang="curl" type="button">cURL</button>
+                <button class="lang-tab" data-lang="python" type="button">Python</button>
+                <button class="lang-tab" data-lang="nodejs" type="button">Node.js</button>
+                <button class="lang-tab" data-lang="go" type="button">Go</button>
+              </div>
+              <button id="btn-copy-snippet" class="btn btn-ghost btn-xs" type="button">Copy Code</button>
+            </div>
+            <pre id="code-snippet-box" class="code-terminal" tabindex="0"></pre>
+          </div>
+        </section>
+
+        <!-- CARD 4: LIVE DISPATCH ACTIVITY & AUDIT FEED -->
+        <section class="cockpit-card" id="card-activity">
+          <div class="card-header">
+            <div class="card-title-group">
+              <div class="card-icon-frame" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+              </div>
+              <div>
+                <h2 class="card-heading">Live Dispatch & Audit Feed</h2>
+                <p class="card-subheading">Real-time trace of recent dispatches, delivery receipts, and verification results.</p>
+              </div>
+            </div>
+            <div class="card-action-group">
+              <button id="btn-refresh-activity" class="btn btn-ghost btn-sm" type="button">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+                <span>Refresh</span>
+              </button>
+              <button id="btn-clear-activity" class="btn btn-ghost btn-sm btn-ghost-danger" type="button">Clear</button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="activity-table" aria-label="Recent dispatch activities">
+              <thead>
+                <tr>
+                  <th scope="col">Time</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Recipient</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Summary</th>
+                </tr>
+              </thead>
+              <tbody id="activity-table-body">
+                <tr>
+                  <td colspan="5" class="table-empty-row">No dispatches recorded in this session.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
+
+    <!-- Cockpit Footer -->
+    <footer class="cockpit-footer">
+      <div class="footer-left">
+        <span>WhatsApp REST API Gateway</span> &bull; <span>Standalone Single Container Architecture</span>
+      </div>
+      <div class="footer-right">
+        <a href="/api/health" target="_blank" rel="noopener" class="footer-link">Health Endpoint</a>
+        <a href="https://github.com/Abdelrahman0xFF/whatsapp-gateway" target="_blank" rel="noopener" class="footer-link">Repository & Docs</a>
+      </div>
+    </footer>
   </div>
 
   <script src="/js/app.js"></script>

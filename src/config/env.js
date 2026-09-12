@@ -26,4 +26,6 @@ export const ENV = {
     10,
   ),
   DEFAULT_RECIPIENT: process.env.RECIPIENT_NUMBER || "",
+  WEBHOOK_URL: process.env.WEBHOOK_URL || "",
+  WEBHOOK_SECRET: process.env.WEBHOOK_SECRET || "",
 };

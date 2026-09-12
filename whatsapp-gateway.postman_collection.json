@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "c1f7b022-83b6-4b89-a29d-whatsapp-gateway",
     "name": "WhatsApp REST API Gateway",
-    "description": "Production Postman Collection for the WhatsApp REST API Gateway. Includes all endpoints for sending messages, bulk messaging, OTP verification, QR & phone number pairing, and container health monitoring.",
+    "description": "Production Postman Collection for the WhatsApp REST API Gateway. Includes all endpoints for sending messages, rich media dispatch (images, documents, audio, video), bulk messaging, OTP verification, API token lifecycle management, webhooks, activity audit feed, QR & phone number pairing, and container health monitoring.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -16,19 +16,25 @@
       "key": "apiKey",
       "value": "",
       "type": "string",
-      "description": "Optional API Key for x-api-key authentication if GATEWAY_API_KEY is configured"
+      "description": "Optional API Key for x-api-key authentication (or Bearer token) if tokens or GATEWAY_API_KEY are configured"
     },
     {
       "key": "recipientNumber",
       "value": "201012345678",
       "type": "string",
       "description": "Test recipient phone number with country code (digits only)"
+    },
+    {
+      "key": "tokenId",
+      "value": "tok_123456",
+      "type": "string",
+      "description": "Token ID for revocation tests"
     }
   ],
   "item": [
     {
       "name": "Messages",
-      "description": "Endpoints to dispatch single and bulk WhatsApp text messages to any international number.",
+      "description": "Endpoints to dispatch single text, bulk messages, and rich media (images, PDFs, documents, audio voice notes, video) to any WhatsApp number.",
       "item": [
         {
           "name": "Send Single Message",
@@ -56,6 +62,34 @@
               "path": ["api", "messages", "send"]
             },
             "description": "Sends a single WhatsApp text message to the specified recipient phone number."
+          },
+          "response": []
+        },
+        {
+          "name": "Send Media Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"number\": \"{{recipientNumber}}\",\n  \"type\": \"document\",\n  \"mediaUrl\": \"https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf\",\n  \"fileName\": \"Invoice_1042.pdf\",\n  \"caption\": \"Here is your monthly invoice statement.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/send-media",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "messages", "send-media"]
+            },
+            "description": "Dispatches an image, document/PDF, audio voice note, or video attachment via remote URL or Base64 with optional caption."
           },
           "response": []
         },
@@ -118,8 +152,174 @@
       ]
     },
     {
+      "name": "API Token Governance",
+      "description": "Generate, list, and revoke cryptographically secure API keys (wa_live_...) with timing-safe SHA-256 validation.",
+      "item": [
+        {
+          "name": "Generate New API Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Production CRM Backend\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tokens/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tokens", "generate"]
+            },
+            "description": "Generates a new cryptographically secure token starting with 'wa_live_'. Returns plain-text token once."
+          },
+          "response": []
+        },
+        {
+          "name": "List Active Tokens",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tokens",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tokens"]
+            },
+            "description": "Retrieves metadata for all active tokens with masked secrets, creation dates, and last usage timestamps."
+          },
+          "response": []
+        },
+        {
+          "name": "Revoke API Token",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tokens/{{tokenId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tokens", "{{tokenId}}"]
+            },
+            "description": "Immediately invalidates and revokes an API token by its unique ID."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Webhooks & Event Dispatch",
+      "description": "Configure outbound webhook delivery for incoming WhatsApp messages and delivery receipts with HMAC-SHA256 signature verification.",
+      "item": [
+        {
+          "name": "Get Webhook Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/webhooks/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "webhooks", "status"]
+            },
+            "description": "Checks whether an external webhook URL is active and retrieves event delivery statistics."
+          },
+          "response": []
+        },
+        {
+          "name": "Configure Webhook URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com/api/whatsapp-webhook\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/webhooks/configure",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "webhooks", "configure"]
+            },
+            "description": "Dynamically sets or clears the external webhook URL for receiving incoming messages and delivery receipts."
+          },
+          "response": []
+        },
+        {
+          "name": "Test Webhook Dispatch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/webhooks/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "webhooks", "test"]
+            },
+            "description": "Dispatches a synthetic ping event to the configured webhook URL to verify network connectivity and signature verification."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Activity & Audit Feed",
+      "description": "Inspect and manage real-time rolling dispatch history, message IDs, latency, and delivery statuses.",
+      "item": [
+        {
+          "name": "Get Recent Activity Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/activity?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "activity"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Maximum number of recent activities to fetch (max 100)"
+                }
+              ]
+            },
+            "description": "Returns a list of the last dispatches with type, recipient, status (SENT, FAILED, VERIFIED), duration, and summary stats."
+          },
+          "response": []
+        },
+        {
+          "name": "Clear Activity Logs",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/activity/clear",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "activity", "clear"]
+            },
+            "description": "Resets and clears the session activity audit log."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "OTP Verification",
-      "description": "Cryptographically secure one-time password generation and verification flows with expiration TTL.",
+      "description": "Cryptographically secure one-time password generation and verification flows with expiration TTL and anti-bombing cooldowns.",
       "item": [
         {
           "name": "Request / Send OTP",
@@ -145,7 +345,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "otp", "send"]
             },
-            "description": "Generates a 6-digit numeric OTP, saves it in memory with 5-min TTL, and sends it to the recipient's WhatsApp."
+            "description": "Generates a 6-digit numeric OTP, enforces a 45-second per-number anti-bombing cooldown, and dispatches via WhatsApp."
           },
           "response": []
         },
@@ -310,7 +510,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "health"]
             },
-            "description": "Liveness check returning service status, uptime, WhatsApp connection state, and engine mode."
+            "description": "Liveness check returning service status, uptime, WhatsApp connection state, auth status, and engine mode."
           },
           "response": []
         }

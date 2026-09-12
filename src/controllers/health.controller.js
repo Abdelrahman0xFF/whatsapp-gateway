@@ -1,5 +1,7 @@
 import { ENV } from '../config/env.js';
 import { whatsappService } from '../services/whatsapp.service.js';
+import { tokenService } from '../services/token.service.js';
+import { activityService } from '../services/activity.service.js';
 
 class HealthController {
   async getHealth(req, res) {
@@ -18,6 +20,7 @@ class HealthController {
       service: 'whatsapp-rest-gateway',
       version: '2.0.0',
       uptime: `${uptimeSeconds}s`,
+      uptimeSeconds,
       timestamp: new Date().toISOString(),
       engine: ENV.WHATSAPP_ENGINE,
       whatsapp: {
@@ -25,8 +28,10 @@ class HealthController {
         mode: ENV.WHATSAPP_ENGINE === 'baileys' ? 'embedded (1-container)' : 'remote-evolution'
       },
       auth: {
-        apiKeyProtected: !!ENV.GATEWAY_API_KEY
-      }
+        apiKeyProtected: tokenService.hasKeys(),
+        tokenCount: tokenService.listTokens().length
+      },
+      stats: activityService.getStats()
     });
   }
 }

@@ -180,9 +180,57 @@ Sends sequentially with built-in anti-spam delay between dispatches.
 }
 ```
 
+#### Media & Document Dispatch
+`POST /api/messages/send-media`
+
+Sends images, PDFs, office documents, audio voice notes, or videos via URL or Base64.
+
+**Request Body (via URL):**
+```json
+{
+  "number": "201012345678",
+  "type": "document",
+  "mediaUrl": "https://example.com/invoice.pdf",
+  "fileName": "Invoice_1042.pdf",
+  "caption": "Your payment receipt"
+}
+```
+*Supported `type` values: `image`, `document`, `audio`, `video`.*
+
 ---
 
-### 2. OTP Verification
+### 2. Token & Key Lifecycle Management
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/tokens` | List all active tokens (masked secrets, timestamps, usage) |
+| `POST` | `/api/tokens/generate` | Generate a new cryptographically secure token (`{"name": "CRM"}`) |
+| `DELETE` | `/api/tokens/:id` | Revoke an API token |
+
+---
+
+### 3. Webhooks & Event Dispatch
+
+Configure outbound webhook delivery for incoming messages and delivery receipts (`X-Hub-Signature-256` HMAC signed):
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/webhooks/status` | Get webhook configuration and delivery stats |
+| `POST` | `/api/webhooks/configure` | Set or update webhook URL (`{"url": "https://..."}`) |
+| `POST` | `/api/webhooks/test` | Dispatch a ping test payload |
+
+---
+
+### 4. Activity & Diagnostics Feed
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/activity` | Get recent message dispatches, statuses, and success rates |
+| `DELETE` | `/api/activity/clear` | Reset activity audit stream |
+
+---
+
+### 5. OTP Verification
 
 #### Request OTP
 `POST /api/otp/send`

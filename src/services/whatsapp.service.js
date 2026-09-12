@@ -40,6 +40,13 @@ class WhatsAppService {
     return this.activeService.sendTextMessage(number, text);
   }
 
+  sendMediaMessage(params) {
+    if (this.activeService.sendMediaMessage) {
+      return this.activeService.sendMediaMessage(params);
+    }
+    throw new Error('Media messaging is not supported by the active engine.');
+  }
+
   logoutInstance() {
     return this.activeService.logoutInstance();
   }

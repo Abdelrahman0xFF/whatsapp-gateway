@@ -21,6 +21,27 @@ class MessageController {
     }
   }
 
+  async sendMedia(req, res, next) {
+    try {
+      const validated = req.validated;
+      const result = await whatsappService.sendMediaMessage(validated);
+
+      return res.status(200).json({
+        success: true,
+        message: 'WhatsApp media message sent successfully.',
+        data: {
+          recipient: result.recipient,
+          type: result.type,
+          messageId: result.messageId,
+          status: result.status,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async sendBulk(req, res, next) {
     try {
       const { numbers, message, messages } = req.body || {};

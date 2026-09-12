@@ -1,10 +1,6 @@
-import { ENV } from '../config/env.js';
+import { tokenService } from '../services/token.service.js';
 
 export function apiKeyAuth(req, res, next) {
-  if (!ENV.GATEWAY_API_KEY) {
-    return next();
-  }
-
   const authHeader = req.headers['authorization'] || '';
   const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : null;
   
@@ -14,20 +10,26 @@ export function apiKeyAuth(req, res, next) {
     req.query.api_key ||
     bearerToken;
 
-  if (!clientKey) {
+  const validation = tokenService.validateToken(clientKey);
+
+  if (validation.valid) {
+    if (validation.token) {
+      req.tokenInfo = validation.token;
+    }
+    return next();
+  }
+
+  if (validation.reason === 'Missing API key') {
     return res.status(401).json({
       success: false,
-      error: 'Unauthorized: Missing API Key. Provide "x-api-key" header or Bearer token.'
+      error: 'Unauthorized: Missing API Key. Provide "x-api-key" header or "Authorization: Bearer <token>".',
+      code: 'ERR_UNAUTHORIZED'
     });
   }
 
-  const validKeys = ENV.GATEWAY_API_KEY.split(',').map(k => k.trim()).filter(Boolean);
-  if (!validKeys.includes(clientKey)) {
-    return res.status(403).json({
-      success: false,
-      error: 'Forbidden: Invalid API Key provided.'
-    });
-  }
-
-  next();
+  return res.status(403).json({
+    success: false,
+    error: 'Forbidden: Invalid API Key provided.',
+    code: 'ERR_FORBIDDEN'
+  });
 }
