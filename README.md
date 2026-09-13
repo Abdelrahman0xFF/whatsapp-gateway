@@ -8,7 +8,8 @@ Runs in a **single Docker container** with **zero external database dependencies
 
 ## ⚡ Key Capabilities
 
-- **🚀 Single-Container Architecture**: Self-contained with local atomic JSON storage; deploys anywhere in minutes.
+- **🚀 Single-Container Architecture**: Self-contained with local atomic JSON storage or cloud MongoDB; deploys anywhere in minutes.
+- **💾 Flexible Dual Storage (Local Files or MongoDB)**: Works out of the box with zero external database dependencies using local `./data` JSON files. Providing `MONGODB_URI` in `.env` automatically switches to MongoDB (Atlas or self-hosted) with automatic migration of existing local tokens, logs, and sessions.
 - **🖥️ Developer Cockpit**: High-density developer dashboard featuring an upper operational deck, an integrated testing console with live response & code generator, and a dedicated full-width paginated audit feed.
 - **📱 Dual Pairing Modes**: Connect via high-contrast QR code scan or 8-digit phone pairing code (no camera scan required).
 - **🔑 Cryptographic Key Governance**: Generate and revoke `wa_live_...` tokens with timing-safe SHA-256 validation. Supports multiple project keys and strict zero-trust isolation.
@@ -533,7 +534,9 @@ The repository includes a ready-to-import Postman Collection:
 | `HOST`                 | `0.0.0.0`                    | Bind host address                                                  |
 | `NODE_ENV`             | `development`                | Runtime environment (`development`, `production`, `test`)          |
 | `WHATSAPP_ENGINE`      | `baileys`                    | Engine mode: `baileys` (embedded) or `evolution` (remote)          |
-| `SESSION_DATA_PATH`    | `./data/auth_info`           | Directory where WhatsApp session credentials persist               |
+| `MONGODB_URI`          | _(empty)_                    | MongoDB connection URI. If provided, enables MongoDB storage. If blank, defaults to `./data` local files |
+| `MONGODB_DB_NAME`      | `whatsapp_gateway`           | Database name to use in MongoDB (or database specified in URI)    |
+| `SESSION_DATA_PATH`    | `./data/auth_info`           | Local fallback directory where WhatsApp session credentials persist|
 | `ADMIN_API_KEY`        | _(auto-generated)_           | Master Admin Key for Web Cockpit, key management, QR code, and logs|
 | `RATE_LIMIT_MAX`       | `60`                         | Max requests per rate limit window per IP                          |
 | `RATE_LIMIT_WINDOW_MS` | `60000`                      | Rate limit window duration in milliseconds (default 1 min)         |
@@ -544,6 +547,34 @@ The repository includes a ready-to-import Postman Collection:
 | `EVOLUTION_API_URL`    | `http://localhost:8080`      | URL of remote Evolution API instance (if using Evolution engine)   |
 | `EVOLUTION_API_KEY`    | `my-super-secret-key-123456` | API key for remote Evolution API (if using Evolution engine)       |
 | `INSTANCE_NAME`        | `test-bot`                   | Instance identifier (if using Evolution engine)                    |
+
+### 🍃 MongoDB Persistence & Seamless Fallback (`MONGODB_URI`)
+
+The gateway supports dual storage modes with zero breaking changes:
+
+1. **Default Mode (Local JSON Files)**:
+   - When `MONGODB_URI` is left blank or unset, the gateway stores all tokens, audit logs, auto-generated admin keys, webhook configuration, and WhatsApp session keys in the local `./data` directory.
+   - Ideal for local development, VPS hosting with persistent disks, or Docker setups with attached volumes (`-v $(pwd)/data:/app/data`).
+
+2. **MongoDB Cloud Mode (Zero Disk Dependency)**:
+   - When `MONGODB_URI` is set in your environment (e.g. `mongodb+srv://...` or `mongodb://localhost:27017`), the gateway automatically links with MongoDB.
+   - **Collections Used**:
+     - `tokens`: API client tokens (`wa_live_...`).
+     - `activities`: Full activity and dispatch audit trail.
+     - `settings`: Master admin key and outbound webhook endpoint configuration.
+     - `baileys_auth`: WhatsApp multi-device authentication credentials and Signal ratchet keys.
+   - **Automatic Migration**: On initial startup with MongoDB connected, if the MongoDB collections are empty and local data exists in `./data`, the gateway automatically migrates your existing tokens, activity logs, admin secrets, and WhatsApp session credentials directly into MongoDB!
+   - **Ideal For Ephemeral Platforms**: Deploy on **Hugging Face Spaces**, **Render.com**, **Fly.io**, or **Railway** without attaching persistent storage volumes. WhatsApp connections survive container restarts, scaling events, and redeployments seamlessly.
+   - **Safe Fallback**: If the MongoDB URI is invalid or unreachable at boot, the gateway logs a clear warning and falls back safely to local file storage without crashing.
+
+```ini
+# Connect to MongoDB Atlas (Cloud)
+MONGODB_URI=mongodb+srv://username:password@cluster0.abcde.mongodb.net/whatsapp_gateway?retryWrites=true&w=majority
+MONGODB_DB_NAME=whatsapp_gateway
+
+# Or connect to a local / self-hosted MongoDB
+MONGODB_URI=mongodb://localhost:27017/whatsapp_gateway
+```
 
 ### 📱 Whitelist Phone Number (`WHITELIST_PHONE_NUMBER`)
 
@@ -570,10 +601,14 @@ WHITELIST_PHONE_NUMBER=201012345678
 Run the automated integration test suite:
 
 ```bash
+# Test with default local file storage
 npm test
+
+# Test with MongoDB storage (requires a local or test MongoDB instance)
+npm run test:mongo
 ```
 
-The test suite validates health checks, UI static assets, token lifecycle, auth middlewares, input validation, messaging endpoints, OTP flows, webhooks, instance management, and paginated activity feed operations.
+The test suite validates health checks, UI static assets, token lifecycle, auth middlewares, input validation, messaging endpoints, OTP flows, webhooks, instance management, MongoDB storage adapters, and paginated activity feed operations.
 
 ### Running Tests with a Custom Whitelist Recipient
 
@@ -593,7 +628,7 @@ The test runner will confirm that `/api/health` and `/api/instance/status` dynam
 
 ## 🔒 Production Best Practices & Anti-Ban Safety
 
-1. **Persistent Session Storage**: On cloud platforms with ephemeral disks (Docker containers or Hugging Face Spaces), attach persistent storage to `./data/auth_info/` so your connection survives container restarts.
+1. **Persistent Session Storage (MongoDB or Disk Mount)**: On cloud platforms with ephemeral disks (Render, Hugging Face Spaces, Railway, Fly.io, or container restarts), provide `MONGODB_URI` so your WhatsApp connection, tokens, and logs persist reliably across restarts without needing attached disk volumes. If using local file storage, attach a persistent volume to `./data/`.
 2. **Warm Up New Phone Numbers**: When using a newly registered WhatsApp number, ramp up volume gradually (e.g., 20-50 messages per day initially) rather than blasting hundreds of messages on day one.
 3. **Use Explicit Opt-In**: Only dispatch messages to users who explicitly opted in to avoid spam reports that trigger WhatsApp automated account restrictions.
 

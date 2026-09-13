@@ -1,4 +1,5 @@
 import { whatsappService } from '../services/whatsapp.service.js';
+import { databaseService } from '../config/database.js';
 import { ENV } from '../config/env.js';
 
 class InstanceController {
@@ -8,6 +9,7 @@ class InstanceController {
       return res.status(200).json({
         success: true,
         whitelistPhone: ENV.WHITELIST_PHONE_NUMBER,
+        storage: databaseService.getStorageInfo(),
         ...status
       });
     } catch (error) {

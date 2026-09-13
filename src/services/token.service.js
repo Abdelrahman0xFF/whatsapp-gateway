@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { databaseService } from '../config/database.js';
 
 class TokenService {
   constructor() {
@@ -8,9 +9,11 @@ class TokenService {
     this.tokens = [];
     this.loaded = false;
     this.saveTimeout = null;
+    this.pendingMongoUpdates = new Map();
+    this.mongoUpdateTimeout = null;
   }
 
-  _ensureStorage() {
+  _loadFromFile() {
     try {
       const dir = path.dirname(this.storagePath);
       if (!fs.existsSync(dir)) {
@@ -30,10 +33,85 @@ class TokenService {
     }
   }
 
+  async _loadFromMongo() {
+    try {
+      const col = databaseService.getCollection('tokens');
+      if (!col) return false;
+
+      const docs = await col.find({}).sort({ createdAt: -1 }).toArray();
+      if (docs.length > 0) {
+        this.tokens = docs.map(({ _id, ...token }) => ({ id: _id || token.id, ...token }));
+        this.loaded = true;
+        return true;
+      }
+
+      // Check migration from local file
+      if (fs.existsSync(this.storagePath)) {
+        try {
+          const raw = fs.readFileSync(this.storagePath, 'utf-8');
+          const localTokens = JSON.parse(raw || '[]');
+          if (Array.isArray(localTokens) && localTokens.length > 0) {
+            console.log(`🍃 Migrating ${localTokens.length} local API tokens into MongoDB...`);
+            const ops = localTokens.map(t => ({
+              updateOne: {
+                filter: { _id: t.id },
+                update: { $set: t },
+                upsert: true
+              }
+            }));
+            await col.bulkWrite(ops);
+            this.tokens = localTokens;
+            this.loaded = true;
+            console.log('🍃 Local API tokens successfully migrated to MongoDB!');
+            return true;
+          }
+        } catch (migErr) {
+          console.warn('[TokenService] Migration warning:', migErr.message);
+        }
+      }
+
+      this.tokens = [];
+      this.loaded = true;
+      return true;
+    } catch (err) {
+      console.error('[TokenService] Error loading tokens from MongoDB:', err.message);
+      return false;
+    }
+  }
+
+  _ensureStorage() {
+    if (this.loaded) return;
+    this._loadFromFile();
+  }
+
   _debouncedSave() {
     if (this.saveTimeout) clearTimeout(this.saveTimeout);
     this.saveTimeout = setTimeout(() => {
       this._saveStorage();
+    }, 1000);
+  }
+
+  _debouncedMongoUpdate(id, lastUsedAt) {
+    this.pendingMongoUpdates.set(id, lastUsedAt);
+    if (this.mongoUpdateTimeout) clearTimeout(this.mongoUpdateTimeout);
+    this.mongoUpdateTimeout = setTimeout(async () => {
+      const col = databaseService.getCollection('tokens');
+      if (!col || this.pendingMongoUpdates.size === 0) return;
+
+      const entries = Array.from(this.pendingMongoUpdates.entries());
+      this.pendingMongoUpdates.clear();
+
+      try {
+        const ops = entries.map(([tid, timestamp]) => ({
+          updateOne: {
+            filter: { _id: tid },
+            update: { $set: { lastUsedAt: timestamp } }
+          }
+        }));
+        await col.bulkWrite(ops, { ordered: false });
+      } catch (err) {
+        console.error('[TokenService] Error updating token lastUsedAt in MongoDB:', err.message);
+      }
     }, 1000);
   }
 
@@ -42,7 +120,9 @@ class TokenService {
       clearTimeout(this.saveTimeout);
       this.saveTimeout = null;
     }
-    this._saveStorage();
+    if (!databaseService.isConnected()) {
+      this._saveStorage();
+    }
   }
 
   _saveStorage() {
@@ -59,12 +139,16 @@ class TokenService {
     }
   }
 
-  init() {
-    this._ensureStorage();
+  async init() {
+    if (databaseService.isConnected()) {
+      await this._loadFromMongo();
+    } else {
+      this._loadFromFile();
+    }
   }
 
   listTokens(includeSecret = false) {
-    if (!this.loaded) this.init();
+    if (!this.loaded) this._ensureStorage();
     return this.tokens.map(t => {
       const masked = t.token.length > 12 
         ? `${t.token.slice(0, 7)}...${t.token.slice(-4)}`
@@ -77,13 +161,13 @@ class TokenService {
         createdAt: t.createdAt,
         lastUsedAt: t.lastUsedAt,
         status: t.status,
-        source: t.source || 'db'
+        source: t.source || (databaseService.isConnected() ? 'mongodb' : 'file')
       };
     });
   }
 
   generateToken(name = 'API Key') {
-    if (!this.loaded) this.init();
+    if (!this.loaded) this._ensureStorage();
 
     if (this.tokens.length >= 100) {
       throw new Error('Maximum token capacity reached (100 tokens). Please revoke unused tokens before creating new ones.');
@@ -100,12 +184,22 @@ class TokenService {
       token,
       createdAt: new Date().toISOString(),
       lastUsedAt: null,
-      source: 'custom',
+      source: databaseService.isConnected() ? 'mongodb' : 'custom',
       status: 'active'
     };
 
     this.tokens.unshift(tokenObj);
-    this._saveStorage();
+
+    if (databaseService.isConnected()) {
+      const col = databaseService.getCollection('tokens');
+      if (col) {
+        col.updateOne({ _id: tokenObj.id }, { $set: tokenObj }, { upsert: true }).catch(err => {
+          console.error('[TokenService] MongoDB error saving token:', err.message);
+        });
+      }
+    } else {
+      this._saveStorage();
+    }
 
     return {
       id: tokenObj.id,
@@ -117,7 +211,7 @@ class TokenService {
   }
 
   revokeToken(id) {
-    if (!this.loaded) this.init();
+    if (!this.loaded) this._ensureStorage();
 
     const index = this.tokens.findIndex(t => t.id === id);
     if (index === -1) {
@@ -125,7 +219,17 @@ class TokenService {
     }
 
     this.tokens.splice(index, 1);
-    this._saveStorage();
+
+    if (databaseService.isConnected()) {
+      const col = databaseService.getCollection('tokens');
+      if (col) {
+        col.deleteOne({ _id: id }).catch(err => {
+          console.error('[TokenService] MongoDB error revoking token:', err.message);
+        });
+      }
+    } else {
+      this._saveStorage();
+    }
     return true;
   }
 
@@ -137,7 +241,7 @@ class TokenService {
   }
 
   validateToken(clientKey) {
-    if (!this.loaded) this.init();
+    if (!this.loaded) this._ensureStorage();
 
     if (!clientKey) {
       return { valid: false, reason: 'Missing API key' };
@@ -147,7 +251,11 @@ class TokenService {
     for (const t of this.tokens) {
       if (t.status === 'active' && this.safeCompare(t.token, clientKey)) {
         t.lastUsedAt = new Date().toISOString();
-        this._debouncedSave();
+        if (databaseService.isConnected()) {
+          this._debouncedMongoUpdate(t.id, t.lastUsedAt);
+        } else {
+          this._debouncedSave();
+        }
         return { valid: true, token: t };
       }
     }
@@ -156,10 +264,10 @@ class TokenService {
   }
 
   hasKeys() {
-    if (!this.loaded) this.init();
+    if (!this.loaded) this._ensureStorage();
     return this.tokens.some(t => t.status === 'active');
   }
 }
 
 export const tokenService = new TokenService();
-tokenService.init();
+tokenService._ensureStorage();

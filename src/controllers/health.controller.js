@@ -1,4 +1,5 @@
 import { ENV } from '../config/env.js';
+import { databaseService } from '../config/database.js';
 import { whatsappService } from '../services/whatsapp.service.js';
 import { tokenService } from '../services/token.service.js';
 import { activityService } from '../services/activity.service.js';
@@ -24,6 +25,7 @@ class HealthController {
       timestamp: new Date().toISOString(),
       engine: ENV.WHATSAPP_ENGINE,
       whitelistPhone: ENV.WHITELIST_PHONE_NUMBER,
+      storage: databaseService.getStorageInfo(),
       whatsapp: {
         status: whatsappStatus,
         mode: ENV.WHATSAPP_ENGINE === 'baileys' ? 'embedded (1-container)' : 'remote-evolution'

@@ -2,12 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { ENV } from '../config/env.js';
+import { databaseService } from '../config/database.js';
 
 class AdminService {
   constructor() {
     this.secretPath = path.resolve('./data/.admin_secret');
     this.adminKey = '';
-    this.keySource = 'none'; // 'env' | 'gateway_env' | 'generated'
+    this.keySource = 'none'; // 'env' | 'generated'
     this.initialized = false;
   }
 
@@ -22,12 +23,10 @@ class AdminService {
     }
   }
 
-  init() {
+  async init() {
     if (this.initialized) return;
 
-    this._ensureStorage();
-
-    // 1. Explicit ADMIN_API_KEY in environment
+    // 1. Explicit ADMIN_API_KEY in environment takes highest priority
     if (ENV.ADMIN_API_KEY && ENV.ADMIN_API_KEY.trim()) {
       this.adminKey = ENV.ADMIN_API_KEY.trim();
       this.keySource = 'env';
@@ -35,7 +34,62 @@ class AdminService {
       return;
     }
 
-    // 2. Persistent auto-generated key stored in data directory
+    // 2. If MongoDB is connected, load or store in settings collection
+    if (databaseService.isConnected()) {
+      try {
+        const col = databaseService.getCollection('settings');
+        if (col) {
+          const doc = await col.findOne({ _id: 'admin_secret' });
+          if (doc && doc.value) {
+            this.adminKey = doc.value;
+            this.keySource = 'generated';
+            this.initialized = true;
+            return;
+          }
+
+          // Check if local file exists to migrate
+          if (fs.existsSync(this.secretPath)) {
+            const storedKey = fs.readFileSync(this.secretPath, 'utf-8').trim();
+            if (storedKey) {
+              await col.updateOne(
+                { _id: 'admin_secret' },
+                { $set: { value: storedKey, updatedAt: new Date() } },
+                { upsert: true }
+              );
+              this.adminKey = storedKey;
+              this.keySource = 'generated';
+              this.initialized = true;
+              return;
+            }
+          }
+
+          // Generate a new secure random admin key
+          const randomHex = crypto.randomBytes(24).toString('hex');
+          const generatedKey = `adm_live_${randomHex}`;
+          await col.updateOne(
+            { _id: 'admin_secret' },
+            { $set: { value: generatedKey, createdAt: new Date() } },
+            { upsert: true }
+          );
+
+          // Also write locally as backup if possible
+          this._ensureStorage();
+          try {
+            fs.writeFileSync(this.secretPath, generatedKey, { encoding: 'utf-8', mode: 0o600 });
+          } catch {}
+
+          this.adminKey = generatedKey;
+          this.keySource = 'generated';
+          this.initialized = true;
+          return;
+        }
+      } catch (err) {
+        console.error('[AdminService] Error checking admin key in MongoDB:', err.message);
+      }
+    }
+
+    // 3. Fallback: Persistent auto-generated key stored in data directory
+    this._ensureStorage();
     try {
       if (fs.existsSync(this.secretPath)) {
         const storedKey = fs.readFileSync(this.secretPath, 'utf-8').trim();
@@ -102,7 +156,11 @@ class AdminService {
       console.log('🛡️  [SECURITY] Auto-generated Master Admin Key:');
       console.log(`👉 ${this.adminKey}`);
       console.log('Use this key to unlock the Web Cockpit and manage API tokens.');
-      console.log(`Persisted to: ${this.secretPath}`);
+      if (databaseService.isConnected()) {
+        console.log(`Persisted to: MongoDB collection "settings"`);
+      } else {
+        console.log(`Persisted to: ${this.secretPath}`);
+      }
       console.log('------------------------------------------------------');
     }
   }

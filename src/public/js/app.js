@@ -259,6 +259,16 @@ async function checkStatus() {
       DOM.connectedPhoneDisplay.innerText = `WhatsApp account +${userPhone} is active and listening. Messages dispatch instantly.`;
       DOM.instanceJidVal.innerText = data.user?.id || 'baileys-session';
 
+      const storageInfo = data.storage || healthData.storage;
+      const storageValEl = document.getElementById('session-storage-val');
+      if (storageValEl && storageInfo) {
+        if (storageInfo.type === 'mongodb') {
+          storageValEl.innerText = `MongoDB (${storageInfo.database || 'connected'})`;
+        } else {
+          storageValEl.innerText = storageInfo.path || './data/auth_info';
+        }
+      }
+
       scheduleStatusPoll(30000);
     } else {
       STATE.isConnected = false;

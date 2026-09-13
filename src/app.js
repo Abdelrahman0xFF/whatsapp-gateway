@@ -39,7 +39,12 @@ app.use((req, res, next) => {
   res.on('finish', () => {
     const duration = Date.now() - start;
     const isStatic = req.path.startsWith('/css') || req.path.startsWith('/js') || req.path.startsWith('/favicon');
-    const isRoutinePolling = (req.path === '/api/instance/status' || req.path === '/api/instance/qr') && (res.statusCode === 200 || res.statusCode === 304);
+    const isRoutinePolling =
+      (req.path === '/api/instance/status' ||
+        req.path === '/api/instance/qr' ||
+        req.path === '/api/activity' ||
+        req.path === '/api/health') &&
+      (res.statusCode === 200 || res.statusCode === 304);
 
     if (!isStatic && !isRoutinePolling) {
       console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} ${res.statusCode} (${duration}ms)`);

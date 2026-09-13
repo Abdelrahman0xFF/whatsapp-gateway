@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { ENV } from '../config/env.js';
+import { databaseService } from '../config/database.js';
 
 class WebhookService {
   constructor() {
@@ -27,16 +28,67 @@ class WebhookService {
     }
   }
 
+  async init() {
+    if (databaseService.isConnected()) {
+      try {
+        const col = databaseService.getCollection('settings');
+        if (col) {
+          const doc = await col.findOne({ _id: 'webhook_config' });
+          if (doc && doc.url !== undefined) {
+            this.webhookUrl = doc.url;
+            return;
+          }
+
+          // Check if local file exists to migrate
+          if (fs.existsSync(this.storagePath)) {
+            const raw = fs.readFileSync(this.storagePath, 'utf-8');
+            const data = JSON.parse(raw || '{}');
+            if (data.url !== undefined) {
+              this.webhookUrl = data.url;
+              await col.updateOne(
+                { _id: 'webhook_config' },
+                { $set: { url: this.webhookUrl, updatedAt: new Date() } },
+                { upsert: true }
+              );
+              return;
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[WebhookService] Error loading webhook config from MongoDB:', err.message);
+      }
+    }
+    this._load();
+  }
+
   setWebhookUrl(url) {
     this.webhookUrl = url;
-    try {
-      const dir = path.dirname(this.storagePath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+
+    if (databaseService.isConnected()) {
+      try {
+        const col = databaseService.getCollection('settings');
+        if (col) {
+          col.updateOne(
+            { _id: 'webhook_config' },
+            { $set: { url: this.webhookUrl, updatedAt: new Date() } },
+            { upsert: true }
+          ).catch(err => {
+            console.error('[WebhookService] MongoDB save error:', err.message);
+          });
+        }
+      } catch (err) {
+        console.error('[WebhookService] Error saving webhook config to MongoDB:', err.message);
       }
-      fs.writeFileSync(this.storagePath, JSON.stringify({ url: this.webhookUrl }, null, 2), 'utf-8');
-    } catch (err) {
-      console.error('[WebhookService] Error saving webhook config:', err.message);
+    } else {
+      try {
+        const dir = path.dirname(this.storagePath);
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+        fs.writeFileSync(this.storagePath, JSON.stringify({ url: this.webhookUrl }, null, 2), 'utf-8');
+      } catch (err) {
+        console.error('[WebhookService] Error saving webhook config:', err.message);
+      }
     }
   }
 

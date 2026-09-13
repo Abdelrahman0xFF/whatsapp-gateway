@@ -11,6 +11,8 @@ import path from 'node:path';
 import dns from 'node:dns/promises';
 import net from 'node:net';
 import { ENV } from '../config/env.js';
+import { databaseService } from '../config/database.js';
+import { useMongoAuthState } from '../config/mongoAuth.js';
 import { activityService } from './activity.service.js';
 import { webhookService } from './webhook.service.js';
 
@@ -96,11 +98,22 @@ class BaileysService {
     this._cleanupCurrentSocket();
 
     try {
-      if (!fs.existsSync(this.authFolder)) {
-        fs.mkdirSync(this.authFolder, { recursive: true });
+      let state, saveCreds;
+
+      if (databaseService.isConnected()) {
+        const col = databaseService.getCollection('baileys_auth');
+        const auth = await useMongoAuthState(col);
+        state = auth.state;
+        saveCreds = auth.saveCreds;
+      } else {
+        if (!fs.existsSync(this.authFolder)) {
+          fs.mkdirSync(this.authFolder, { recursive: true });
+        }
+        const auth = await useMultiFileAuthState(this.authFolder);
+        state = auth.state;
+        saveCreds = auth.saveCreds;
       }
 
-      const { state, saveCreds } = await useMultiFileAuthState(this.authFolder);
       const { version } = await fetchLatestBaileysVersion().catch(() => ({
         version: [2, 3000, 1043857760]
       }));
@@ -530,6 +543,13 @@ class BaileysService {
 
   async clearAuthFolder() {
     try {
+      if (databaseService.isConnected()) {
+        const col = databaseService.getCollection('baileys_auth');
+        if (col) {
+          await col.deleteMany({});
+          console.log('[WhatsApp Engine] Cleared session data from MongoDB collection "baileys_auth".');
+        }
+      }
       if (fs.existsSync(this.authFolder)) {
         fs.rmSync(this.authFolder, { recursive: true, force: true });
         fs.mkdirSync(this.authFolder, { recursive: true });

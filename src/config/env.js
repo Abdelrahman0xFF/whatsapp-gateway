@@ -38,4 +38,10 @@ export const ENV = {
   ).replace(/\D/g, ""),
   WEBHOOK_URL: process.env.WEBHOOK_URL || "",
   WEBHOOK_SECRET: process.env.WEBHOOK_SECRET || "",
+  MONGODB_URI: (process.env.MONGODB_URI || process.env.MONGO_URI || "").trim(),
+  MONGODB_DB_NAME: (
+    process.env.MONGODB_DB_NAME ||
+    process.env.MONGO_DB_NAME ||
+    ""
+  ).trim(),
 };
