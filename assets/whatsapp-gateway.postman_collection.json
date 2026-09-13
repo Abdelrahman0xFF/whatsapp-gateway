@@ -70,14 +70,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/messages/send",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "messages",
-                "send"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "messages", "send"]
             },
             "description": "Sends a single WhatsApp text message to the specified recipient phone number."
           },
@@ -104,14 +98,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/messages/send-media",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "messages",
-                "send-media"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "messages", "send-media"]
             },
             "description": "Dispatches an image, document/PDF, audio voice note, or video attachment via remote URL or Base64 with optional caption. Media URLs are protected by SSRF validation (internal/private/metadata IPs rejected). Maximum file size limit: 25MB (streamed safely)."
           },
@@ -138,13 +126,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/send-message",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "send-message"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "send-message"]
             },
             "description": "Top-level direct alias endpoint for sending messages."
           },
@@ -171,14 +154,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/messages/send-bulk",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "messages",
-                "send-bulk"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "messages", "send-bulk"]
             },
             "description": "Dispatches a message sequentially to an array of recipients with anti-ban jitter delays."
           },
@@ -205,14 +182,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/messages/send-bulk",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "messages",
-                "send-bulk"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "messages", "send-bulk"]
             },
             "description": "Enqueues bulk messages for asynchronous background execution. Immediately returns HTTP 202 Accepted with a batchId to prevent proxy/gateway timeouts."
           },
@@ -240,14 +211,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/admin/verify",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "verify"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "verify"]
             },
             "description": "Validates Master Admin Key during dashboard authentication or external administrative workflows. Enforces rate limiting (max 30 attempts per 15-minute window). Returns success confirmation, key source, and masked identifier."
           },
@@ -267,16 +232,10 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/admin/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "status"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "status"]
             },
-            "description": "Checks if the caller possesses an active Master Admin session and returns key metadata."
+            "description": "Checks if the caller possesses an active Master Admin session and returns key metadata, whitelist phone configuration, and storage topology."
           },
           "response": []
         }
@@ -308,14 +267,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/tokens/generate",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "tokens",
-                "generate"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tokens", "generate"]
             },
             "description": "Generates a new cryptographically secure token starting with 'wa_live_'. Returns plain-text token once."
           },
@@ -335,13 +288,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/tokens",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "tokens"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tokens"]
             },
             "description": "Retrieves metadata for all active tokens with masked secrets, creation dates, and last usage timestamps."
           },
@@ -361,14 +309,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/tokens/{{tokenId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "tokens",
-                "{{tokenId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tokens", "{{tokenId}}"]
             },
             "description": "Immediately invalidates and revokes an API token by its unique ID."
           },
@@ -394,14 +336,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/webhooks/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "webhooks",
-                "status"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "webhooks", "status"]
             },
             "description": "Checks whether an external webhook URL is active and retrieves event delivery statistics."
           },
@@ -429,14 +365,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/webhooks/configure",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "webhooks",
-                "configure"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "webhooks", "configure"]
             },
             "description": "Dynamically sets or clears the external webhook URL for receiving incoming messages and delivery receipts."
           },
@@ -456,14 +386,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/webhooks/test",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "webhooks",
-                "test"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "webhooks", "test"]
             },
             "description": "Dispatches a synthetic ping event to the configured webhook URL to verify network connectivity and signature verification."
           },
@@ -489,13 +413,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/activity?page=1&limit=10&type=ALL&status=ALL&search=2010",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "activity"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "activity"],
               "query": [
                 {
                   "key": "page",
@@ -543,14 +462,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/activity/{{activityId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "activity",
-                "{{activityId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "activity", "{{activityId}}"]
             },
             "description": "Deletes a specific activity log record by its unique ID (e.g. act_...). Returns 200 on success or 404 if not found."
           },
@@ -570,14 +483,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/activity/clear",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "activity",
-                "clear"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "activity", "clear"]
             },
             "description": "Resets and permanently clears all activity audit records from gateway storage."
           },
@@ -610,14 +517,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/otp/send",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "otp",
-                "send"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "otp", "send"]
             },
             "description": "Generates a 6-digit numeric OTP, enforces a 45-second per-number anti-bombing cooldown, and dispatches via WhatsApp."
           },
@@ -645,14 +546,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/otp/request",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "otp",
-                "request"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "otp", "request"]
             },
             "description": "Convenience endpoint alias for requesting/sending a 6-digit OTP passcode to a phone number."
           },
@@ -679,14 +574,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/otp/verify",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "otp",
-                "verify"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "otp", "verify"]
             },
             "description": "Verifies user-submitted 6-digit OTP. Returns 200 VERIFIED or 400 with attempts left."
           },
@@ -712,16 +601,10 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/instance/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "instance",
-                "status"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "instance", "status"]
             },
-            "description": "Returns current connection state: 'open' (connected), 'connecting', or 'disconnected'."
+            "description": "Returns current connection state: 'open' (connected), 'connecting', or 'disconnected'. When authenticated with Master Admin Key, includes whitelist phone and detailed storage info."
           },
           "response": []
         },
@@ -739,14 +622,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/instance/qr",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "instance",
-                "qr"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "instance", "qr"]
             },
             "description": "Fetches current QR code as base64 Data URL and raw code for camera scanning."
           },
@@ -774,14 +651,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/instance/pairing-code",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "instance",
-                "pairing-code"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "instance", "pairing-code"]
             },
             "description": "Requests an 8-character pairing code (e.g. WXYZ-1234) to link phone directly without using a camera."
           },
@@ -801,14 +672,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/instance/connect",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "instance",
-                "connect"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "instance", "connect"]
             },
             "description": "Forces instance to connect or generate a fresh QR code."
           },
@@ -828,14 +693,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/instance/restart",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "instance",
-                "restart"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "instance", "restart"]
             },
             "description": "Restarts the internal WhatsApp socket connection."
           },
@@ -855,14 +714,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/instance/logout",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "instance",
-                "logout"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "instance", "logout"]
             },
             "description": "Unlinks current WhatsApp account, deletes session files, and prepares for a new device connection."
           },
@@ -881,15 +734,10 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/health",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "health"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
             },
-            "description": "Returns container health status, uptime, WhatsApp engine state, active key protection, and configured whitelist phone number."
+            "description": "Returns container health status, uptime, WhatsApp engine state, active key protection, and storage status (sanitized for public monitoring with zero leaked phone numbers or database connection URIs)."
           },
           "response": []
         }

@@ -111,26 +111,30 @@ class DatabaseService {
     }
   }
 
-  getStorageInfo() {
+  getStorageInfo(verbose = false) {
     if (this.connected && this.db) {
       return {
         type: 'mongodb',
         status: 'connected',
-        database: this.db.databaseName,
-        uri: this.maskUri(ENV.MONGODB_URI)
+        ...(verbose
+          ? {
+              database: this.db.databaseName,
+              uri: this.maskUri(ENV.MONGODB_URI)
+            }
+          : {})
       };
     }
     if (this.isMongoEnabled()) {
       return {
         type: 'mongodb',
         status: 'disconnected_fallback_file',
-        path: ENV.SESSION_DATA_PATH
+        ...(verbose ? { path: ENV.SESSION_DATA_PATH } : {})
       };
     }
     return {
       type: 'file',
       status: 'active',
-      path: ENV.SESSION_DATA_PATH
+      ...(verbose ? { path: ENV.SESSION_DATA_PATH } : {})
     };
   }
 }

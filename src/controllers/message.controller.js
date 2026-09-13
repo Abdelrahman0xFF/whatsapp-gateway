@@ -67,7 +67,7 @@ class MessageController {
       }
 
       const batchId = `batch_${crypto.randomBytes(6).toString('hex')}`;
-      const safeDelay = Math.max(parseInt(delayMs, 10) || 1000, 500);
+      const safeDelay = Math.min(Math.max(parseInt(delayMs, 10) || 1000, 500), 10000);
 
       const processBatch = async () => {
         const results = [];
@@ -75,11 +75,22 @@ class MessageController {
         let failedCount = 0;
 
         for (const item of tasks) {
-          const cleanNumber = String(item.number || item.phone || '').replace(/\D/g, '');
-          const text = item.message || item.text || message;
+          if (!item || typeof item !== 'object') {
+            results.push({ number: null, success: false, error: 'Invalid batch item format' });
+            failedCount++;
+            continue;
+          }
 
-          if (!cleanNumber || !text) {
-            results.push({ number: item.number, success: false, error: 'Missing phone number or message' });
+          const rawNum = item.number || item.phone || '';
+          const cleanNumber = String(rawNum).replace(/\D/g, '');
+          const text = typeof item.message === 'string' ? item.message : typeof item.text === 'string' ? item.text : message;
+
+          if (!cleanNumber || cleanNumber.length < 7 || cleanNumber.length > 15 || !text || !String(text).trim()) {
+            results.push({
+              number: rawNum || null,
+              success: false,
+              error: 'Invalid phone number (must be 7-15 digits with country code) or missing message'
+            });
             failedCount++;
             continue;
           }

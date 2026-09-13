@@ -2,17 +2,28 @@ import { tokenService } from '../services/token.service.js';
 import { adminService } from '../services/admin.service.js';
 
 function extractCandidateKey(req) {
-  const authHeader = req.headers['authorization'] || '';
-  const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
-  const bearerToken = bearerMatch ? bearerMatch[1].trim() : null;
-
-  return (
+  const rawKey =
     req.headers['x-admin-key'] ||
     req.headers['x-api-key'] ||
-    req.headers['apikey'] ||
-    bearerToken ||
-    ''
-  );
+    req.headers['apikey'];
+
+  if (rawKey) {
+    const candidate = Array.isArray(rawKey) ? rawKey[0] : rawKey;
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  const authHeader = req.headers['authorization'] || '';
+  const headerStr = Array.isArray(authHeader) ? authHeader[0] : authHeader;
+  if (typeof headerStr === 'string') {
+    const bearerMatch = headerStr.match(/^Bearer\s+(.+)$/i);
+    if (bearerMatch) {
+      return bearerMatch[1].trim();
+    }
+  }
+
+  return '';
 }
 
 /**

@@ -438,13 +438,13 @@ function renderTokensTable(tokens) {
       actionsHtml = `
         <span class="inline-revoke-confirm">
           <span>Revoke?</span>
-          <button class="btn btn-danger btn-xs" onclick="executeRevokeToken('${t.id}')">Yes</button>
-          <button class="btn btn-ghost btn-xs" onclick="cancelRevokeToken()">No</button>
+          <button class="btn btn-danger btn-xs" data-action="execute-revoke" data-id="${t.id}" onclick="executeRevokeToken('${t.id}')">Yes</button>
+          <button class="btn btn-ghost btn-xs" data-action="cancel-revoke" onclick="cancelRevokeToken()">No</button>
         </span>
       `;
     } else {
       actionsHtml = `
-        <button class="btn btn-ghost btn-xs btn-ghost-danger" title="Revoke API key" onclick="promptRevokeToken('${t.id}')">
+        <button class="btn btn-ghost btn-xs btn-ghost-danger" title="Revoke API key" data-action="prompt-revoke" data-id="${t.id}" onclick="promptRevokeToken('${t.id}')">
           Revoke
         </button>
       `;
@@ -1113,7 +1113,7 @@ function renderActivityTable(activities) {
       <tr>
         <td colspan="6" class="table-empty-row">
           ${isFiltered 
-            ? 'No dispatches match your search or filter criteria. <button class="btn btn-ghost btn-xs" onclick="resetActivityFilters()">Reset Filters</button>'
+            ? 'No dispatches match your search or filter criteria. <button class="btn btn-ghost btn-xs" data-action="reset-filters" onclick="resetActivityFilters()">Reset Filters</button>'
             : 'No dispatches recorded in this session. Dispatch your first message from the studio above.'
           }
         </td>
@@ -1148,7 +1148,7 @@ function renderActivityTable(activities) {
           <div class="activity-summary-cell" title="${escapedSummary}">${escapedSummary}</div>
         </td>
         <td class="text-right">
-          <button class="btn btn-ghost btn-xs btn-ghost-danger" title="Delete record" onclick="handleDeleteActivity('${a.id}')">
+          <button class="btn btn-ghost btn-xs btn-ghost-danger" title="Delete record" data-action="delete-activity" data-id="${a.id}" onclick="handleDeleteActivity('${a.id}')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </td>
@@ -1185,17 +1185,17 @@ function renderPaginationControls() {
 
   let html = '';
   if (startPage > 1) {
-    html += `<button class="btn-page-number" onclick="goToActivityPage(1)">1</button>`;
+    html += `<button class="btn-page-number" data-page="1" onclick="goToActivityPage(1)">1</button>`;
     if (startPage > 2) html += `<span class="pagination-ellipsis">&hellip;</span>`;
   }
 
   for (let i = startPage; i <= endPage; i++) {
-    html += `<button class="btn-page-number ${i === page ? 'active' : ''}" onclick="goToActivityPage(${i})">${i}</button>`;
+    html += `<button class="btn-page-number ${i === page ? 'active' : ''}" data-page="${i}" onclick="goToActivityPage(${i})">${i}</button>`;
   }
 
   if (endPage < totalPages) {
     if (endPage < totalPages - 1) html += `<span class="pagination-ellipsis">&hellip;</span>`;
-    html += `<button class="btn-page-number" onclick="goToActivityPage(${totalPages})">${totalPages}</button>`;
+    html += `<button class="btn-page-number" data-page="${totalPages}" onclick="goToActivityPage(${totalPages})">${totalPages}</button>`;
   }
 
   DOM.activityPageNumbers.innerHTML = html;
@@ -1445,6 +1445,39 @@ function initEventListeners() {
     DOM.formAdminLogin.addEventListener('submit', (e) => {
       e.preventDefault();
       handleAdminUnlock();
+    });
+  }
+
+  // Delegated Table Action Handlers (Strict CSP-compliant, supports dynamic DOM without inline scripts)
+  if (DOM.tokensTableBody) {
+    DOM.tokensTableBody.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const id = btn.dataset.id;
+      if (action === 'execute-revoke' && id) executeRevokeToken(id);
+      else if (action === 'cancel-revoke') cancelRevokeToken();
+      else if (action === 'prompt-revoke' && id) promptRevokeToken(id);
+    });
+  }
+
+  if (DOM.activityTableBody) {
+    DOM.activityTableBody.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const id = btn.dataset.id;
+      if (action === 'delete-activity' && id) handleDeleteActivity(id);
+      else if (action === 'reset-filters') resetActivityFilters();
+    });
+  }
+
+  if (DOM.activityPageNumbers) {
+    DOM.activityPageNumbers.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-page]');
+      if (!btn) return;
+      const page = parseInt(btn.dataset.page, 10);
+      if (!isNaN(page)) goToActivityPage(page);
     });
   }
 }

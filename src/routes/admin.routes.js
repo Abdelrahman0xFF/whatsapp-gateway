@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { adminService } from '../services/admin.service.js';
 import { adminAuth } from '../middlewares/auth.middleware.js';
 import { adminRateLimiter } from '../middlewares/rateLimiter.middleware.js';
+import { databaseService } from '../config/database.js';
+import { ENV } from '../config/env.js';
 
 const router = Router();
 
@@ -40,7 +42,9 @@ router.get('/status', adminAuth, (req, res) => {
     success: true,
     authenticated: true,
     source: adminService.getKeySource(),
-    maskedKey: adminService.getMaskedAdminKey()
+    maskedKey: adminService.getMaskedAdminKey(),
+    whitelistPhone: ENV.WHITELIST_PHONE_NUMBER,
+    storage: databaseService.getStorageInfo(true)
   });
 });
 

@@ -428,18 +428,18 @@ Permanently clears all activity records from storage.
 
 ### 7. Health & Monitoring
 
-| Method | Endpoint      | Description                                                       |
-| :----- | :------------ | :---------------------------------------------------------------- |
-| `GET`  | `/api/health` | Service liveness, container uptime, engine mode, and socket state |
+| Method | Endpoint      | Description                                                                                     |
+| :----- | :------------ | :---------------------------------------------------------------------------------------------- |
+| `GET`  | `/api/health` | Public service liveness, uptime, engine mode, socket state, and storage mode (sanitized output) |
 
 ---
 
 ### 8. Master Admin Endpoints
 
-| Method | Endpoint            | Auth Required | Description                                                                 |
-| :----- | :------------------ | :------------ | :-------------------------------------------------------------------------- |
-| `POST` | `/api/admin/verify` | None          | Verify Master Admin Key to unlock Cockpit (rate-limited to 30 req / 15 min) |
-| `GET`  | `/api/admin/status` | Master Admin  | Check current admin session authentication status                           |
+| Method | Endpoint            | Auth Required | Description                                                                                 |
+| :----- | :------------------ | :------------ | :------------------------------------------------------------------------------------------ |
+| `POST` | `/api/admin/verify` | None          | Verify Master Admin Key to unlock Cockpit (rate-limited to 30 req / 15 min)                 |
+| `GET`  | `/api/admin/status` | Master Admin  | Returns admin session metadata, configured whitelist phone, and detailed storage topology   |
 
 ---
 
@@ -586,7 +586,7 @@ WHITELIST_PHONE_NUMBER=201012345678
 ```
 
 - **Environment Fallbacks**: The gateway checks `WHITELIST_PHONE_NUMBER`, `WHITELIST_NUMBER`, and `RECIPIENT_NUMBER`. If none is specified, it defaults safely to `201012345678`.
-- **Dynamic App Placeholders**: The backend automatically serves this number in `GET /api/health` and `GET /api/instance/status`. The Developer Cockpit client app dynamically injects it as the placeholder across:
+- **Dynamic App Placeholders**: The backend automatically serves this number to authenticated admin sessions in `GET /api/admin/status` and `GET /api/instance/status` (while keeping public `/api/health` sanitized to protect your privacy). The Developer Cockpit client app dynamically injects it as the placeholder across:
   - Text Message Recipient input (`#text-msg-phone`)
   - Media Message Recipient input (`#media-msg-phone`)
   - OTP Recipient input (`#otp-recipient-phone`)
@@ -622,7 +622,7 @@ $env:WHITELIST_PHONE_NUMBER="201099887766"; npm test
 WHITELIST_PHONE_NUMBER=201099887766 npm test
 ```
 
-The test runner will confirm that `/api/health` and `/api/instance/status` dynamically reflect this whitelist number and will validate all messaging and pairing code flows with it.
+The test runner will confirm that `/api/health` remains sanitized (no private phone numbers or database connection URIs leaked) while `/api/admin/status` and `/api/instance/status` (with Master Admin key) dynamically reflect this whitelist number and will validate all messaging and pairing code flows with it.
 
 ---
 

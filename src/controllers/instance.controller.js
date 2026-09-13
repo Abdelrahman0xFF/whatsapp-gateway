@@ -6,10 +6,11 @@ class InstanceController {
   async getStatus(req, res, next) {
     try {
       const status = await whatsappService.checkConnection();
+      const isAdmin = Boolean(req.isAdmin);
       return res.status(200).json({
         success: true,
-        whitelistPhone: ENV.WHITELIST_PHONE_NUMBER,
-        storage: databaseService.getStorageInfo(),
+        ...(isAdmin ? { whitelistPhone: ENV.WHITELIST_PHONE_NUMBER } : {}),
+        storage: databaseService.getStorageInfo(isAdmin),
         ...status
       });
     } catch (error) {

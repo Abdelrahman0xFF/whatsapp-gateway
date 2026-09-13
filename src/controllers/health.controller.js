@@ -24,8 +24,7 @@ class HealthController {
       uptimeSeconds,
       timestamp: new Date().toISOString(),
       engine: ENV.WHATSAPP_ENGINE,
-      whitelistPhone: ENV.WHITELIST_PHONE_NUMBER,
-      storage: databaseService.getStorageInfo(),
+      storage: databaseService.getStorageInfo(false),
       whatsapp: {
         status: whatsappStatus,
         mode: ENV.WHATSAPP_ENGINE === 'baileys' ? 'embedded (1-container)' : 'remote-evolution'

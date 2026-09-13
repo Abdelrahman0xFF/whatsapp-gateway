@@ -35,12 +35,16 @@ async function runTests() {
       'x-admin-key': adminKey
     };
 
-    // 1. Health check (Public pass-through and Whitelist Phone exposure)
+    // 1. Health check (Public operational status, NO data leakage of phone or database URI)
     const healthRes = await fetch(`${baseUrl}/api/health`);
     const healthData = await healthRes.json();
     assert(
-      healthRes.status === 200 && healthData.status === 'ok' && healthData.whitelistPhone === testPhoneNumber,
-      `GET /api/health returns 200 OK and exposes whitelistPhone (${testPhoneNumber})`
+      healthRes.status === 200 &&
+      healthData.status === 'ok' &&
+      healthData.whitelistPhone === undefined &&
+      healthData.storage?.uri === undefined &&
+      healthData.storage?.path === undefined,
+      'GET /api/health returns 200 OK and protects privacy (no whitelistPhone, URI, or paths leaked)'
     );
 
     // 2. Web UI dashboard serves
@@ -222,7 +226,23 @@ async function runTests() {
     const statusData = await statusRes.json();
     assert(
       statusRes.status === 200 && statusData.instance && statusData.whitelistPhone === testPhoneNumber,
-      'GET /api/instance/status returns instance info and whitelistPhone for authenticated caller'
+      'GET /api/instance/status returns instance info and whitelistPhone for authenticated admin'
+    );
+
+    const clientStatusRes = await fetch(`${baseUrl}/api/instance/status`, {
+      headers: { 'Content-Type': 'application/json', 'x-api-key': createdToken }
+    });
+    const clientStatusData = await clientStatusRes.json();
+    assert(
+      clientStatusRes.status === 200 && clientStatusData.whitelistPhone === undefined,
+      'GET /api/instance/status hides whitelistPhone from client API keys'
+    );
+
+    const adminStatusRes = await fetch(`${baseUrl}/api/admin/status`, { headers: adminHeaders });
+    const adminStatusData = await adminStatusRes.json();
+    assert(
+      adminStatusRes.status === 200 && adminStatusData.whitelistPhone === testPhoneNumber,
+      'GET /api/admin/status returns whitelistPhone and detailed storage to authenticated admin'
     );
 
     // 16. Webhooks Security
